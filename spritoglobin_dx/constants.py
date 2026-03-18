@@ -22,18 +22,13 @@ THEME_PRESETS = {
     'gmgd': ["#aee714", "#ff3c75", "#cf2cff", "#555596"], # geraco, mboss, gedonko, dstar
     'glob': ["#f05ec7", "#edd20a", "#9f5cda", "#14bb59"], # the globins
     'choc': ["#883800", "#ffe898", "#ff7020", "#404050"], # chococat
-    'f_ww': ["#ff9b56", "#d462a6", "#a40062", "#d62800"], # lesbean flag
-    'f_mm': ["#26ceaa", "#5049cc", "#7bade2", "#98e8c1"], # toothpaste flag
+    'f_ww': ["#d462a6", "#ff9b56", "#a40062", "#d62800"], # lesbean flag
+    'f_mm': ["#26ceaa", "#5049cc", "#98e8c1", "#7bade2"], # toothpaste flag
     'f_nb': ["#fff433", "#9b59d0", "#2d2d2d", "#dddddd"], # en-bee flag
     'f_py': ["#009fe3", "#e50051", "#340c46", "#fcbf00"], # poly want a cracker flag
 }
 
 THEME_COLORS = {
-    "M_COLOR_0": THEME_PRESETS['mlkp'][0], # mario
-    "L_COLOR_0": THEME_PRESETS['mlkp'][1], # luigi
-    "K_COLOR_0": THEME_PRESETS['mlkp'][2], # koopa
-    "P_COLOR_0": THEME_PRESETS['mlkp'][3], # paper
-
     "WHITE": "#ffffffff",
 
     "GRAY_L": "#88888888",
@@ -49,13 +44,6 @@ THEME_COLOR_ICON_MASKS = {
     "K_COLOR_0": ("#FFFF00", "#FFFFBF", "#808000"),
     "P_COLOR_0": ("#00FFFF", "#BFFFFF", "#008080"),
 }
-
-# temp test thingy
-preset = 'mlkp'
-THEME_COLORS["M_COLOR_0"] = THEME_PRESETS[preset][0]
-THEME_COLORS["L_COLOR_0"] = THEME_PRESETS[preset][1]
-THEME_COLORS["K_COLOR_0"] = THEME_PRESETS[preset][2]
-THEME_COLORS["P_COLOR_0"] = THEME_PRESETS[preset][3]
 
 
 LANGUAGES = { # display name, NDS value, 3DS key, github documentation language key

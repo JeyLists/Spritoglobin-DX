@@ -1,13 +1,14 @@
 import configparser
 import math
 import os
+from functools import partial
 
 from PIL import Image
 from PySide6 import QtWidgets, QtGui
 
 from spritoglobin_dx.classes import ObjFile, InvalidObjectFileError
 from spritoglobin_dx.constants import *
-from spritoglobin_dx.gui import InteractiveGraphicsWindow
+from spritoglobin_dx.gui import InteractiveGraphicsWindow, GraphicsAnimationTimeline
 
 
 class FileImportWindow(QtWidgets.QDialog):
@@ -52,6 +53,8 @@ class FileImportWindow(QtWidgets.QDialog):
         layout.addWidget(self.import_button, 3, 1, alignment = QtCore.Qt.AlignmentFlag.AlignCenter)
 
         self.setLayout(layout)
+        # this does nothing but i'm keeping it here in case it randomly decides to work ever
+        self.import_button.setFocus()
 
         self.prematurely_closed = None
         self.prevent_open = False
@@ -292,6 +295,7 @@ class GifExportWindow(QtWidgets.QDialog):
         layout.addWidget(line, 6, 0, 1, 4)
 
         self.setLayout(layout)
+        self.export_button.setFocus()
 
         self.animation_timer = QtCore.QTimer()
         self.animation_timer.setTimerType(QtCore.Qt.PreciseTimer)
@@ -614,3 +618,324 @@ class GifExportWindow(QtWidgets.QDialog):
         )
 
         self.animation_timer.start()
+
+
+
+class ProgramThemeEditor(QtWidgets.QWidget):
+    closed = QtCore.Signal()
+
+    def __init__(self, parent, current_window_icon, default_colors, default_map, icon_path, graphics_window_bg, graphics_timeline_bg):
+        super().__init__()
+
+        self.parent = parent
+
+        self.current_window_icon = current_window_icon
+
+        self.setWindowTitle(self.tr("ThemeWindowTitle"))
+        self.setWindowIcon(self.current_window_icon)
+        self.setWindowFlag(QtCore.Qt.CustomizeWindowHint, True)
+        self.setWindowFlag(QtCore.Qt.WindowMaximizeButtonHint, False)
+
+        self.theme_colors = list(default_colors)
+        self.icon_path = icon_path
+
+        layout = QtWidgets.QGridLayout()
+
+        color_buttons = QtWidgets.QWidget()
+        color_buttons_layout = QtWidgets.QHBoxLayout(color_buttons)
+        color_buttons_layout.setContentsMargins(0, 0, 0, 0)
+        self.color_buttons = []
+        for i in range(4):
+            button = QtWidgets.QPushButton()
+            button.setText("#000000")
+            button.clicked.connect(partial(self.set_theme_color, i))
+            color_buttons_layout.addWidget(button)
+            self.color_buttons.append(button)
+
+        preset_buttons = QtWidgets.QWidget()
+        preset_buttons_layout = QtWidgets.QGridLayout(preset_buttons)
+        preset_buttons_layout.setContentsMargins(0, 0, 0, 0)
+
+        self.map_colors_toggle = QtWidgets.QCheckBox(self.tr("ThemeMapColorsToggle"))
+        self.map_colors_toggle.setChecked(default_map)
+        self.map_colors_toggle.checkStateChanged.connect(self.set_colors)
+
+        columns = 4
+        for i, preset in enumerate(THEME_PRESETS):
+            button = QtWidgets.QPushButton()
+
+            icon_size = (52, 52)
+            scale_factor = 1
+
+            button.setIcon(self.parent.grab_theme_icon('img_presets_temp', i + 1, icon_size).transformed(QtGui.QTransform().scale(scale_factor, scale_factor)))
+            button.setIconSize(QtCore.QSize(icon_size[0] * scale_factor, icon_size[1] * scale_factor))
+
+            button.clicked.connect(partial(self.set_preset_colors, preset))
+            preset_buttons_layout.addWidget(button, (i // columns), i % columns)
+
+        global_palette = QtWidgets.QWidget()
+        global_palette_layout = QtWidgets.QHBoxLayout(global_palette)
+        global_palette_layout.setContentsMargins(0, 0, 0, 0)
+        self.global_palette_labels = []
+
+        palette_total = 4
+        for i in range(palette_total):
+            palette_label = QtWidgets.QLabel()
+            palette_label.setSizePolicy(QtWidgets.QSizePolicy.Ignored, palette_label.sizePolicy().verticalPolicy())
+            global_palette_layout.addWidget(palette_label)
+            self.global_palette_labels.append(palette_label)
+
+        # only one of them needs to be given this
+        self.global_palette_labels[palette_total - 1].resizeEvent = self.redraw_global_palette
+
+        button_icon_demo_frame = QtWidgets.QFrame()
+        button_icon_demo_frame_layout = QtWidgets.QHBoxLayout(button_icon_demo_frame)
+        button_icon_demo_frame_layout.setContentsMargins(6, 6, 6, 6)
+        self.button_icon_demo = QtWidgets.QLabel()
+        button_icon_demo_frame_layout.addWidget(self.button_icon_demo)
+
+        button_icon_demo_frame.setFrameShape(QtWidgets.QFrame.Panel)
+        button_icon_demo_frame.setFrameShadow(QtWidgets.QFrame.Raised)
+        button = QtWidgets.QPushButton()
+        button_color = button.palette().color(QtGui.QPalette.Button).name()
+        button_icon_demo_frame.setStyleSheet(f"background-color: {button_color};")
+        button_icon_demo_frame.setAutoFillBackground(True)
+
+        mono_font = QtGui.QFont()
+        mono_font.setFamily("Monospace")
+        mono_font.setFixedPitch(True)
+
+        self.graphics_window_preview = InteractiveGraphicsWindow(
+            parent = self,
+            font = mono_font,
+            size = [128, 128],
+            default_scale = 2,
+            default_offset = [0.0, 0.0],
+            min_scale = 1.0,
+            max_scale = 4.0,
+            grid_size = 16,
+        )
+        self.graphics_window_preview.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
+        self.graphics_window_preview.setMinimumWidth(128)
+        self.graphics_window_preview.setMinimumHeight(128)
+        self.graphics_window_preview.background_color = graphics_window_bg
+        self.graphics_window_preview.bounding_boxes = [[-8, 8, -8, 8]]
+        self.graphics_window_preview.draw_image(self.parent.grab_theme_icon(self.icon_path, 1, (16, 16)).toImage(), (8, 8))
+
+        self.graphics_timeline_preview = GraphicsAnimationTimeline(
+            parent           = self,
+            font             = mono_font,
+            padding_amount   = 9,
+            timeline_height  = 39,
+            keyframe_padding = 6,
+            playhead_height  = 8,
+            minimal          = True,
+        )
+        self.graphics_timeline_preview.setSizePolicy(QtWidgets.QSizePolicy.Ignored, QtWidgets.QSizePolicy.Fixed)
+        self.graphics_timeline_preview.layout.setContentsMargins(0, 0, 0, 0)
+        self.graphics_timeline_preview.background_color = graphics_timeline_bg
+        self.graphics_timeline_preview.update_timeline(
+            length    = 32,
+            keyframes = [0, 8, 16, 24],
+        )
+        self.graphics_timeline_preview.play_button.setEnabled(True)
+        self.graphics_timeline_preview.stop_button.setEnabled(True)
+        self.graphics_timeline_preview.playbackToggled.connect(self.toggle_playback)
+        self.graphics_timeline_preview.playbackStopped.connect(self.stop_playback)
+        self.graphics_timeline_preview.timelineScrubbed.connect(self.set_animation_timer)
+
+        self.graphics_timeline_preview.bounding_box_toggle.setVisible(True)
+        self.graphics_timeline_preview.bounding_box_toggle_string.setVisible(True)
+        self.graphics_timeline_preview.bounding_box_toggle.setEnabled(False)
+        self.graphics_timeline_preview.bounding_box_toggle_string.setEnabled(False)
+        self.graphics_timeline_preview.bounding_box_toggle.setChecked(True)
+
+        self.accept_button = QtWidgets.QPushButton(self.tr("ThemeAcceptButton"))
+        self.accept_button.clicked.connect(self.accept_theme)
+
+        layout.addWidget(color_buttons, 1, 0, 1, 2)
+        layout.addWidget(self.map_colors_toggle, 2, 0, 1, 2, alignment = QtCore.Qt.AlignmentFlag.AlignLeft)
+        layout.addWidget(preset_buttons, 5, 0, 1, 2, alignment = QtCore.Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(button_icon_demo_frame, 8, 0)
+        layout.addWidget(self.graphics_window_preview, 8, 1)
+        layout.addWidget(self.graphics_timeline_preview, 9, 0, 1, 2)
+        layout.addWidget(global_palette, 10, 0, 1, 2)
+        layout.addWidget(self.accept_button, 11, 0, 1, 2, alignment = QtCore.Qt.AlignmentFlag.AlignCenter)
+        
+        string = QtWidgets.QLabel(self.tr("ThemeSettingsTitle"))
+        string.setEnabled(False)
+        layout.addWidget(string, 0, 0, 1, 2)
+        
+        string = QtWidgets.QLabel(self.tr("ThemePresetsTitle"))
+        string.setEnabled(False)
+        layout.addWidget(string, 4, 0, 1, 2)
+
+        string = QtWidgets.QLabel(self.tr("ThemePreviewTitle"))
+        string.setEnabled(False)
+        layout.addWidget(string, 7, 0, 1, 2)
+
+        line = QtWidgets.QFrame()
+        line.setFrameShape(QtWidgets.QFrame.HLine)
+        line.setFrameShadow(QtWidgets.QFrame.Sunken)
+        layout.addWidget(line, 3, 0, 1, 2)
+
+        line = QtWidgets.QFrame()
+        line.setFrameShape(QtWidgets.QFrame.HLine)
+        line.setFrameShadow(QtWidgets.QFrame.Sunken)
+        layout.addWidget(line, 6, 0, 1, 2)
+
+        self.setLayout(layout)
+
+        self.animation_timer = QtCore.QTimer()
+        self.animation_timer.setTimerType(QtCore.Qt.PreciseTimer)
+        framerate = [60, 30][self.parent.settings["framerate"]]
+        self.timer_advance = [1, 2][self.parent.settings["framerate"]]
+        self.animation_timer.setInterval(round(1000 / framerate))
+        self.animation_timer.timeout.connect(self.tick_timer)
+
+        self.timeline_timer = 0
+
+        self.prematurely_closed = True
+
+        self.set_colors()
+
+    def set_theme_color(self, color):
+        chosen_color = QtWidgets.QColorDialog.getColor(self.theme_colors[color])
+        if chosen_color.isValid():
+            self.theme_colors[color] = chosen_color.name()
+            self.set_colors()
+
+    def set_preset_colors(self, preset):
+        self.theme_colors = list(THEME_PRESETS[preset])
+        self.map_colors_toggle.setChecked(True)
+        self.set_colors()
+
+    def set_colors(self):
+        THEME_COLORS["M_COLOR_0"] = self.theme_colors[0]
+        THEME_COLORS["L_COLOR_0"] = self.theme_colors[1]
+        THEME_COLORS["K_COLOR_0"] = self.theme_colors[2]
+        THEME_COLORS["P_COLOR_0"] = self.theme_colors[3]
+        map_theme_colors = self.map_colors_toggle.isChecked()
+
+        for i, button in enumerate(self.color_buttons):
+            color = QtGui.QColor(self.theme_colors[i])
+
+            r, g, b, _ = color.getRgbF()
+            lum = (0.2126 * r + 0.7152 * g + 0.0722 * b)
+            if lum > 0.5:
+                text_color = "#000000"
+            else:
+                text_color = "#FFFFFF"
+
+            button.setStyleSheet(f"QPushButton {{background-color: {color.name()}; color: {text_color};}}")
+            button.setText(color.name())
+
+        icon_demo = self.parent.grab_theme_icon(self.icon_path, 1, None, map_theme_colors = map_theme_colors)
+        icon_demo = icon_demo.transformed(QtGui.QTransform().scale(2, 2))
+        self.button_icon_demo.setPixmap(icon_demo)
+
+        self.theme_icons = {
+            'zoom_in':  self.parent.grab_theme_icon(self.icon_path, 3, (16, 16), map_theme_colors = map_theme_colors),
+            'zoom_out': self.parent.grab_theme_icon(self.icon_path, 2, (16, 16), map_theme_colors = map_theme_colors),
+            'reset':    self.parent.grab_theme_icon(self.icon_path, 4, (16, 16), map_theme_colors = map_theme_colors),
+            'play':     self.parent.grab_theme_icon(self.icon_path, 5, (16, 16), map_theme_colors = map_theme_colors),
+            'pause':    self.parent.grab_theme_icon(self.icon_path, 6, (16, 16), map_theme_colors = map_theme_colors),
+            'stop':     self.parent.grab_theme_icon(self.icon_path, 7, (16, 16), map_theme_colors = map_theme_colors),
+        }
+
+        self.graphics_window_preview.update_program_theme()
+        self.graphics_timeline_preview.update_program_theme()
+
+        self.redraw_global_palette()
+
+        palette_button_icon = self.parent.grab_theme_icon(self.icon_path, 8, (16, 16), map_theme_colors = map_theme_colors)
+        self.accept_button.setIcon(palette_button_icon)
+
+    def accept_theme(self):
+        self.prematurely_closed = False
+        self.close()
+
+    def set_animation_timer(self, time):
+        self.timeline_timer = time
+        self.graphics_timeline_preview.set_time(self.timeline_timer)
+
+    def toggle_playback(self, play):
+        if play:
+            self.animation_timer.start()
+        else:
+            self.animation_timer.stop()
+
+    def stop_playback(self):
+        self.animation_timer.stop()
+        self.timeline_timer = 0
+        self.graphics_timeline_preview.set_time(self.timeline_timer)
+
+    def tick_timer(self):
+        self.timeline_timer += self.timer_advance
+        self.graphics_timeline_preview.set_time(self.timeline_timer)
+    
+    def redraw_global_palette(self, event = None):
+        if event is None:
+            width = 70
+        else:
+            width = event.size().width()
+
+        global_palette_line_thickness = min(2, (width // 40) + 1)
+        global_palette_size = ((width - (global_palette_line_thickness * 4)) // 2)
+
+        size = global_palette_size
+        thickness = global_palette_line_thickness
+        color_label_base = QtGui.QPixmap((size * 2) + (thickness * 4), size + (thickness * 4))
+
+        color_label_base.fill(QtCore.Qt.transparent)
+        qp = QtGui.QPainter(color_label_base)
+
+        pen = QtGui.QPen()
+        pen.setWidth(thickness)
+        pen.setJoinStyle(QtCore.Qt.MiterJoin)
+        qp.setPen(pen)
+
+        pen.setColor(QtGui.QColor(THEME_COLORS["P_COLOR_0"]))
+        qp.setPen(pen)
+        qp.drawRect(thickness // 2, thickness // 2, (size * 2) + ((thickness * 4) - thickness), size + ((thickness * 4) - thickness))
+
+        pen.setColor(QtGui.QColor(THEME_COLORS["WHITE"]))
+        qp.setPen(pen)
+        qp.drawRect(thickness + (thickness // 2), thickness + (thickness // 2), (size * 2) + ((thickness * 4) - (thickness * 3)), size + ((thickness * 4) - (thickness * 3)))
+
+        qp.end()
+
+        for i, label in enumerate(self.global_palette_labels):
+            r, g, b, a = [
+                [0x00, 0x00, 0x00, 0xFF],
+                [0xFF, 0x00, 0x00, 0xAA],
+                [0x00, 0xFF, 0x00, 0x55],
+                [0x00, 0x00, 0xFF, 0x00],
+                [0x00, 0xFF, 0xFF, 0xFF],
+                [0xFF, 0x00, 0xFF, 0xAA],
+                [0xFF, 0xFF, 0x00, 0x55],
+                [0xFF, 0xFF, 0xFF, 0x00],
+            ][i]
+
+            qp = QtGui.QPainter(color_label_base)
+            qp.fillRect(
+                thickness * 2,
+                thickness * 2,
+                (color_label_base.width() // 2) - (thickness * 2),
+                color_label_base.height() - (thickness * 4),
+                QtGui.QBrush(QtGui.QColor(r, g, b))
+            )
+            qp.fillRect(
+                color_label_base.width() // 2,
+                thickness * 2,
+                (color_label_base.width() // 2) - (thickness * 2),
+                color_label_base.height() - (thickness * 4),
+                QtGui.QBrush(QtGui.QColor(a, a, a))
+            )
+            qp.end()
+
+            label.setPixmap(color_label_base)
+
+    def closeEvent(self, event):
+        self.closed.emit()
+        super().closeEvent(event)

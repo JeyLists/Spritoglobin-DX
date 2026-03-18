@@ -550,11 +550,13 @@ class AnimationTimeline(QtWidgets.QWidget):
 class GraphicsAnimationTimeline(AnimationTimeline):
     boundingBoxToggled = QtCore.Signal(bool)
 
-    def __init__(self, parent, font, padding_amount, timeline_height, keyframe_padding, playhead_height):
+    def __init__(self, parent, font, padding_amount, timeline_height, keyframe_padding, playhead_height, minimal = False):
         self.bounding_box_visible = False
         self.current_parts = None
         self.current_matrix = None
         self.current_matrix_inv = False
+
+        self.minimal = minimal
 
         self.bounding_box_toggle = QtWidgets.QCheckBox()
         self.bounding_box_toggle_string = QtWidgets.QLabel(self.tr("ShowBoundingBoxToggle"))
@@ -595,7 +597,8 @@ class GraphicsAnimationTimeline(AnimationTimeline):
         self.layout.addWidget(self.bounding_box_toggle_string, 0, 3)
         self.layout.addWidget(self.bounding_box_toggle, 0, 4)
 
-        self.layout.addWidget(frame_data, 2, 0, 1, -1)
+        if not self.minimal:
+            self.layout.addWidget(frame_data, 2, 0, 1, -1)
     
     def draw_keyframes(self, qp, frame_visual_len):
         keyframe_ends = self.current_keyframe_list + [self.current_anim_length]
@@ -652,6 +655,9 @@ class GraphicsAnimationTimeline(AnimationTimeline):
             self.info_text.setText(f"{(current_time):3} / {self.current_anim_length:3}")
         else:
             self.info_text.setText("")
+        
+        if self.minimal:
+            return
         
         string = ""
 
@@ -911,7 +917,7 @@ class ColorAnimationTimeline(AnimationTimeline):
             channel = "?"
             persistant = "?"
 
-        string += self.tr("LayerInfoRenderChannel").format(channel)
+        string += self.tr("LayerInfoPaletteColor").format(channel)
         string += "\n"
         string += self.tr("LayerInfoPersistant").format(persistant)
 

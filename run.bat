@@ -1,1 +1,1 @@
-python3 -m spritoglobin_dx
+poetry run python -m spritoglobin_dx

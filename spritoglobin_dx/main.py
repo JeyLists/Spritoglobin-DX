@@ -4,8 +4,8 @@ import os
 import re
 import sys
 import time
-from importlib.metadata import PackageNotFoundError
 from functools import partial
+from importlib.metadata import PackageNotFoundError
 
 import requests
 from packaging.version import Version
@@ -14,7 +14,7 @@ from PySide6 import QtWidgets, QtGui, QtMultimedia
 from spritoglobin_dx.classes import ObjFile, GAME_IDS_THAT_USE_BOUNDING_BOXES
 from spritoglobin_dx.constants import *
 from spritoglobin_dx.gui import ItemDelegate, InteractiveGraphicsWindow, GraphicsAnimationTimeline, ColorAnimationTimeline
-from spritoglobin_dx.popups import FileImportWindow, GifExportWindow
+from spritoglobin_dx.popups import FileImportWindow, GifExportWindow, ProgramThemeEditor
 
 
 def main():
@@ -86,7 +86,23 @@ class MainWindow(QtWidgets.QMainWindow):
 
         config.read(str(CONFIG_DIR / "config.ini"))
         
-        
+
+        # config - theme
+        if not config.has_section('ProgramTheme'):
+            THEME_COLORS["M_COLOR_0"] = THEME_PRESETS['mlkp'][0]
+            THEME_COLORS["L_COLOR_0"] = THEME_PRESETS['mlkp'][1]
+            THEME_COLORS["K_COLOR_0"] = THEME_PRESETS['mlkp'][2]
+            THEME_COLORS["P_COLOR_0"] = THEME_PRESETS['mlkp'][3]
+            self.theme_icons_map_theme_colors = False
+        else:
+            theme = dict(config['ProgramTheme'])
+            THEME_COLORS["M_COLOR_0"] = theme.get("m_color_0", THEME_PRESETS['mlkp'][0])
+            THEME_COLORS["L_COLOR_0"] = theme.get("l_color_0", THEME_PRESETS['mlkp'][1])
+            THEME_COLORS["K_COLOR_0"] = theme.get("k_color_0", THEME_PRESETS['mlkp'][2])
+            THEME_COLORS["P_COLOR_0"] = theme.get("p_color_0", THEME_PRESETS['mlkp'][3])
+            self.theme_icons_map_theme_colors = theme.get("map_icons", "False") == "True"
+
+        # config - preferences
         if not config.has_section('UserPreferences'):
             config['UserPreferences'] = {}
         self.settings = dict(config['UserPreferences'])
@@ -97,7 +113,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.toggle_update_check(self.settings.get("check_for_updates", None))
         
 
-
+        # config - paths
         if not config.has_section('NavigationPaths'):
             config['NavigationPaths'] = {}
         paths = dict(config['NavigationPaths'])
@@ -319,7 +335,12 @@ class MainWindow(QtWidgets.QMainWindow):
         check_updates.setCheckable(True)
         check_updates.setChecked(self.settings["check_for_updates"] == "True")
         check_updates.toggled.connect(self.toggle_update_check)
+
+        theme_editor = QtGui.QAction(self.tr("MenuBarOptionsEditThemeOption"), self)
+        theme_editor.triggered.connect(self.edit_theme)
         
+        menu_bar_options.addAction(theme_editor)
+        menu_bar_options.addSeparator() # -----------------------------------------
         menu_bar_options.addMenu(framerate_selector)
         menu_bar_options.addAction(audio_mute)
         menu_bar_options.addSeparator() # -----------------------------------------
@@ -669,7 +690,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 self.tr("ExportFailNoDataBlurb"),
             )
             return
-            
+
         self.animation_timer.stop()
 
         with open(self.current_path, 'rb') as obj_in:
@@ -1536,6 +1557,42 @@ class MainWindow(QtWidgets.QMainWindow):
         self.update_sprite_viewer(force = True)
 
 
+    def edit_theme(self):
+        save_colors = THEME_COLORS["M_COLOR_0"], THEME_COLORS["L_COLOR_0"], THEME_COLORS["K_COLOR_0"], THEME_COLORS["P_COLOR_0"]
+        map_colors = self.theme_icons_map_theme_colors
+
+        self.animation_timer.stop()
+
+        editor_window = ProgramThemeEditor(
+            parent               = self,
+            current_window_icon  = self.current_window_icon,
+            default_colors       = save_colors,
+            default_map          = map_colors,
+            icon_path            = self.current_theme_file_path,
+            graphics_window_bg   = self.sprite_viewer.background_color,
+            graphics_timeline_bg = self.sprite_anim_timeline.background_color,
+        )
+
+        editor_window.adjustSize()
+        editor_window.setFixedSize(editor_window.width(), editor_window.height())
+
+        editor_window.setWindowModality(QtCore.Qt.ApplicationModal)
+        editor_window.show()
+
+        loop = QtCore.QEventLoop()
+        editor_window.closed.connect(loop.quit)
+        loop.exec()
+
+        if editor_window.prematurely_closed:
+            THEME_COLORS["M_COLOR_0"], THEME_COLORS["L_COLOR_0"], THEME_COLORS["K_COLOR_0"], THEME_COLORS["P_COLOR_0"] = save_colors
+            return
+
+        THEME_COLORS["M_COLOR_0"], THEME_COLORS["L_COLOR_0"], THEME_COLORS["K_COLOR_0"], THEME_COLORS["P_COLOR_0"] = editor_window.theme_colors
+        self.theme_icons_map_theme_colors = editor_window.map_colors_toggle.isChecked()
+        self.update_program_theme(save_theme = True)
+
+        self.animation_timer.start()
+
     def set_theme(self, update = True):
         self.parent.setPalette(self.parent.palette()) # fixes some race conditions
 
@@ -1558,7 +1615,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
         if update: self.update_program_theme()
     
-    def update_program_theme(self):
+    def update_program_theme(self, save_theme = False):
         if self.current_game_id in GAME_IDS_THAT_ARE_ON_3DS or self.current_game_id is None:
             self.current_window_icon = QtGui.QIcon(str(FILES_DIR / 'ico_sprito_dx.ico'))
             self.success_jingle.setSource(QtCore.QUrl.fromLocalFile(FILES_DIR / "snd_success_dx.wav"))
@@ -1566,9 +1623,9 @@ class MainWindow(QtWidgets.QMainWindow):
         else:
             self.current_window_icon = QtGui.QIcon(str(FILES_DIR / 'ico_sprito.ico'))
             self.success_jingle.setSource(QtCore.QUrl.fromLocalFile(FILES_DIR / "snd_success.wav"))
-            self.current_theme_file_path = 'img_icons'
+            self.current_theme_file_path = 'img_icons_temp' #'img_icons'
 
-        self.set_theme_icons(self.current_theme_file_path, True)
+        self.set_theme_icons(self.current_theme_file_path, self.theme_icons_map_theme_colors)
         self.apply_theme_icons()
         self.setWindowIcon(self.current_window_icon)
 
@@ -1580,11 +1637,24 @@ class MainWindow(QtWidgets.QMainWindow):
         self.sprite_color_anim_timeline.update_program_theme()
         self.global_color_anim_timeline.update_program_theme()
 
+        if save_theme:
+            theme = {}
+            for key in ["M_COLOR_0", "L_COLOR_0", "K_COLOR_0", "P_COLOR_0"]:
+                theme[key] = THEME_COLORS[key]
+            theme["map_icons"] = self.theme_icons_map_theme_colors
+
+            config = configparser.ConfigParser()
+            config.read(CONFIG_DIR / "config.ini")
+            config['ProgramTheme'] = theme
+            with open(CONFIG_DIR / "config.ini", "w") as config_file:
+                config.write(config_file)
+
         self.update_renderer_data()
     
     def globin_theme_toggle(self):
         THEME_COLORS["M_COLOR_0"], THEME_COLORS["L_COLOR_0"], THEME_COLORS["K_COLOR_0"], THEME_COLORS["P_COLOR_0"] = THEME_PRESETS['glob']
-        self.update_program_theme()
+        self.theme_icons_map_theme_colors = True
+        self.update_program_theme(save_theme = True)
 
     def set_theme_icons(self, icon_path, map_theme_colors):
         self.theme_icons['blank']     = self.grab_theme_icon(icon_path,  0, (16, 16), map_theme_colors)
@@ -1621,7 +1691,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.timeline_tabs.setTabIcon(1, self.theme_icons[self.theme_icons_current_single_color_anim_timeline_icon])
         self.timeline_tabs.setTabIcon(2, self.theme_icons[self.theme_icons_current_obj_color_anim_timeline_icon])
 
-    def grab_theme_icon(self, file_path, index, icon_size, map_theme_colors = False):
+    def grab_theme_icon(self, file_path, index, icon_size, map_theme_colors = False, mapped_colors = None):
         if index == 0:
             if icon_size is None:
                 icon = QtGui.QPixmap(str(FILES_DIR / f'{file_path}.png'))
@@ -1651,15 +1721,22 @@ class MainWindow(QtWidgets.QMainWindow):
         qp.setPen(QtCore.Qt.NoPen)
 
         icon_map_sheet = QtGui.QPixmap(str(FILES_DIR / f'{file_path}_map.png'))
-        icon_map = icon_map_sheet.copy(img_rect)
+
+        if icon_size is not None:
+            icon_map = icon_map_sheet.copy(img_rect)
+        else:
+            icon_map = icon_map_sheet
 
         for color in THEME_COLOR_ICON_MASKS:
-            base_color = QtGui.QColor(THEME_COLORS[color])
+            if mapped_colors is None:
+                base_color = QtGui.QColor(THEME_COLORS[color])
+            else:
+                base_color = QtGui.QColor(mapped_colors[color])
 
             replace_colors = [
                 base_color,
-                base_color.lighter(150),
-                base_color.darker(150),
+                base_color.lighter(133),
+                base_color.darker(133),
             ]
 
             for i in range(3):
