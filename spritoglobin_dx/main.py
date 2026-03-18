@@ -885,7 +885,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
             self.change_highlighted_sprite_part()
 
-        self.update_program_theme()
+        self.update_program_theme(update_anim_palette_icons = False)
         self.change_object()
 
         self.anim_list_box.setCurrentRow(0)
@@ -1615,7 +1615,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
         if update: self.update_program_theme()
     
-    def update_program_theme(self, save_theme = False):
+    def update_program_theme(self, save_theme = False, update_anim_palette_icons = True):
         if self.current_game_id in GAME_IDS_THAT_ARE_ON_3DS or self.current_game_id is None:
             self.current_window_icon = QtGui.QIcon(str(FILES_DIR / 'ico_sprito_dx.ico'))
             self.success_jingle.setSource(QtCore.QUrl.fromLocalFile(FILES_DIR / "snd_success_dx.wav"))
@@ -1626,7 +1626,7 @@ class MainWindow(QtWidgets.QMainWindow):
             self.current_theme_file_path = 'img_icons_temp' #'img_icons'
 
         self.set_theme_icons(self.current_theme_file_path, self.theme_icons_map_theme_colors)
-        self.apply_theme_icons()
+        self.apply_theme_icons(update_anim_palette_icons)
         self.setWindowIcon(self.current_window_icon)
 
         self.sprite_viewer.update_program_theme()
@@ -1677,7 +1677,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.theme_icons['g_palette'] = self.grab_disabled_icon(self.theme_icons['palette'])
 
-    def apply_theme_icons(self):
+    def apply_theme_icons(self, update_anim_palette_icons):
         self.menu_bar_file_open_action.setIcon(self.theme_icons['open'])
         self.menu_bar_file_close_action.setIcon(self.theme_icons['close'])
         self.menu_bar_file_quick_export_action.setIcon(self.theme_icons['export'])
@@ -1685,7 +1685,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.menu_bar_file_quit_action.setIcon(self.theme_icons['exit'])
 
         self.global_animation_icon.setPixmap(self.theme_icons[self.theme_icons_current_obj_color_anim_icon])
-        self.set_anim_list_box_palette_icons()
+        if update_anim_palette_icons: self.set_anim_list_box_palette_icons()
 
         self.timeline_tabs.setTabIcon(0, self.theme_icons['sprito'])
         self.timeline_tabs.setTabIcon(1, self.theme_icons[self.theme_icons_current_single_color_anim_timeline_icon])
