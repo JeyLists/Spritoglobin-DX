@@ -11,7 +11,7 @@
     <message>
         <location filename="../gui.py" line="920"/>
         <source>LayerInfoPaletteColor</source>
-        <translation>Global Palette Color: {0}</translation>
+        <translation>Global Palette Colour: {0}</translation>
     </message>
     <message>
         <location filename="../gui.py" line="922"/>
@@ -115,7 +115,7 @@
     <message>
         <location filename="../popups.py" line="45"/>
         <source>ImportAcceptButton</source>
-        <translation>Import File!</translation>
+        <translation>Import File</translation>
     </message>
 </context>
 <context>
@@ -174,7 +174,7 @@
     <message>
         <location filename="../popups.py" line="227"/>
         <source>ExportAcceptButton</source>
-        <translation>Export File!</translation>
+        <translation>Export File</translation>
     </message>
     <message>
         <location filename="../popups.py" line="489"/>
@@ -189,7 +189,7 @@
     <message>
         <location filename="../popups.py" line="617"/>
         <source>ExportFileSuccessBlurb</source>
-        <translation>File {0} has been successfully exported!</translation>
+        <translation>File {0} has been successfully exported.</translation>
     </message>
 </context>
 <context>
@@ -209,7 +209,7 @@
     <message>
         <location filename="../gui.py" line="670"/>
         <source>FrameDataSpritePartsUsedNone</source>
-        <translation>No Sprite Parts Used!</translation>
+        <translation>No Sprite Parts Used.</translation>
     </message>
     <message>
         <location filename="../gui.py" line="676"/>
@@ -220,7 +220,7 @@
     <message>
         <location filename="../gui.py" line="679"/>
         <source>FrameDataTransformMatrixUsedNone</source>
-        <translation>No Transformation Matrix Used!</translation>
+        <translation>No Transformation Matrix Used.</translation>
     </message>
     <message>
         <location filename="../gui.py" line="685"/>
@@ -358,7 +358,7 @@ Download it on {2}</translation>
     <message>
         <location filename="../main.py" line="214"/>
         <source>CheckUpdateNewVersionAssurance</source>
-        <translation>Don&apos;t worry about your program settings, those will be carried over between versions!</translation>
+        <translation>Don&apos;t worry about your program settings, those will be carried over between versions.</translation>
     </message>
     <message>
         <location filename="../main.py" line="223"/>
@@ -378,7 +378,7 @@ Download it on {2}</translation>
     <message>
         <location filename="../main.py" line="237"/>
         <source>CheckUpdateUpToDateBlurb</source>
-        <translation>You&apos;re all caught up! There are no new updates to download.</translation>
+        <translation>You&apos;re all caught up. There are no new updates to download.</translation>
     </message>
     <message>
         <location filename="../main.py" line="255"/>
@@ -474,12 +474,12 @@ Download it on {2}</translation>
     <message>
         <location filename="../main.py" line="765"/>
         <source>GenericBooleanAffirmative</source>
-        <translation>True</translation>
+        <translation>Yes</translation>
     </message>
     <message>
         <location filename="../main.py" line="766"/>
         <source>GenericBooleanNegative</source>
-        <translation>False</translation>
+        <translation>No</translation>
     </message>
     <message>
         <location filename="../main.py" line="1354"/>
@@ -607,12 +607,12 @@ Download it on {2}</translation>
     <message>
         <location filename="../popups.py" line="659"/>
         <source>ThemeMapColorsToggle</source>
-        <translation>Recolor Icons According to Theme</translation>
+        <translation>Recolour Icons According to Theme</translation>
     </message>
     <message>
         <location filename="../popups.py" line="753"/>
         <source>ThemeAcceptButton</source>
-        <translation>Apply Theme!</translation>
+        <translation>Apply Theme</translation>
     </message>
     <message>
         <location filename="../popups.py" line="765"/>
