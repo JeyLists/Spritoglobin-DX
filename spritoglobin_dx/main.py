@@ -716,7 +716,8 @@ class MainWindow(QtWidgets.QMainWindow):
             export_window.export_gif()
         else:
             export_window.exec()
-            
+        
+        self.sprite_viewer.resizeEvent()
         self.animation_timer.start()
 
     def write_config(self):

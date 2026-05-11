@@ -18,7 +18,7 @@ SWIZZLE_TABLE = numpy.array([
 SIZING_TABLE = [[(8, 8), (16, 16), (32, 32), (64, 64)], [(16, 8), (32, 8), (32, 16), (64, 32)], [(8, 16), (8, 32), (16, 32), (32, 64)]]
 
 
-def get_sprite_graphic(obj_anim_data, graph_file, current_anim_index, color_anim_index, current_frame_index, current_time_anim, current_time_color, color_data, separate = False):
+def get_sprite_graphic(obj_anim_data, graph_file, current_anim_index, color_anim_index, current_frame_index, current_time_anim, current_time_color, color_data, bypass_shader, separate):
     anim_data = obj_anim_data.get_anim_data(current_anim_index)
     frame_data = obj_anim_data.get_frame_data(anim_data.first_frame + current_frame_index)
 
@@ -76,6 +76,7 @@ def get_sprite_graphic(obj_anim_data, graph_file, current_anim_index, color_anim
         graph_file             = graph_file,
         first_part             = frame_data.first_part,
         total_parts            = frame_data.total_parts,
+        bypass_shader          = bypass_shader,
         separate               = separate,
         matrix                 = matrix,
         given_bounding_box     = full_bounding_box,
@@ -143,7 +144,7 @@ def get_sprite_part_set_bounding_box(obj_anim_data, first_part, total_parts, giv
     
     return min_x, max_x, min_y, max_y
 
-def get_sprite_part_set_graphic(obj_anim_data, graph_file, first_part, total_parts, separate = False, matrix = None, given_bounding_box = None, color_data = None, current_anim_index = None, color_anim_index = None, current_time_anim = None, current_time_color = None, highlighted_part = None):
+def get_sprite_part_set_graphic(obj_anim_data, graph_file, first_part, total_parts, bypass_shader = False, separate = False, matrix = None, given_bounding_box = None, color_data = None, current_anim_index = None, color_anim_index = None, current_time_anim = None, current_time_color = None, highlighted_part = None):
     min_x, max_x, min_y, max_y = get_sprite_part_set_bounding_box(
         obj_anim_data      = obj_anim_data,
         first_part         = first_part,
@@ -181,7 +182,7 @@ def get_sprite_part_set_graphic(obj_anim_data, graph_file, first_part, total_par
             alpha_divisor = alpha_divisor,
         )
 
-        if color_data is not None and renderer_data is not None and not separate:
+        if color_data is not None and renderer_data is not None and not separate and not bypass_shader:
             anim_data = obj_anim_data.get_anim_data(current_anim_index)
 
             tile = apply_sprite_color(

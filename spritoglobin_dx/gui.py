@@ -79,11 +79,16 @@ class InteractiveGraphicsWindow(QtWidgets.QLabel):
         self.img_data = None
         self.reset_view()
     
-    def resizeEvent(self, event):
-        size = event.size()
-        self.resize([size.width(), size.height()])
+    def resizeEvent(self, event = None):
+        if event is None:
+            size = self.size
+        else:
+            size = event.size()
+            size = [size.width(), size.height()]
+
+        self.resize(size)
         if self.renderer is not None:
-            self.renderer.resize([size.width(), size.height()])
+            self.renderer.resize(size)
         self.update_image()
     
     def mousePressEvent(self, event):

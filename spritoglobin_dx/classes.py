@@ -228,40 +228,43 @@ class ObjFile:
             "renderer_index":  part_data.renderer,
         }
     
-    def get_sprite(self, object_name, animation_index, color_anim_index = None, frame_index = None):
+    def get_sprite(self, object_name, animation_index, color_anim_index = None, frame_index = None, bypass_shader = False):
         img, size, _ = self._get_sprite_data(
             object_name      = object_name,
             animation_index  = animation_index,
             color_anim_index = color_anim_index,
             frame_index      = frame_index,
+            bypass_shader    = bypass_shader,
             separate         = False,
         )
 
         return img, size
     
-    def get_sprite_with_offset(self, object_name, animation_index, color_anim_index = None, frame_index = None):
+    def get_sprite_with_offset(self, object_name, animation_index, color_anim_index = None, frame_index = None, bypass_shader = False):
         img, size, offset = self._get_sprite_data(
             object_name      = object_name,
             animation_index  = animation_index,
             color_anim_index = color_anim_index,
             frame_index      = frame_index,
+            bypass_shader    = bypass_shader,
             separate         = False,
         )
 
         return img, size, offset
     
-    def get_sprite_part_entities(self, object_name, animation_index, color_anim_index = None, frame_index = None):
+    def get_sprite_part_entities(self, object_name, animation_index, color_anim_index = None, frame_index = None, bypass_shader = False):
         data = self._get_sprite_data(
             object_name      = object_name,
             animation_index  = animation_index,
             color_anim_index = color_anim_index,
             frame_index      = frame_index,
+            bypass_shader    = bypass_shader,
             separate         = True,
         )
 
         return data
     
-    def _get_sprite_data(self, object_name, animation_index, color_anim_index = None, frame_index = None, separate = False):
+    def _get_sprite_data(self, object_name, animation_index, color_anim_index, frame_index, bypass_shader, separate):
         self.cache_object(object_name)
         
         obj_anim_data = self.cached_object.obj_anim_data
@@ -296,6 +299,7 @@ class ObjFile:
             current_time_anim   = animation_timer,
             current_time_color  = color_timer,
             color_data          = color_data,
+            bypass_shader       = bypass_shader,
             separate            = separate,
         )
     

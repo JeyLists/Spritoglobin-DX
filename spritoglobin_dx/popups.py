@@ -10,6 +10,7 @@ from PySide6 import QtWidgets, QtGui
 from spritoglobin_dx.classes import ObjFile, InvalidObjectFileError
 from spritoglobin_dx.constants import *
 from spritoglobin_dx.gui import InteractiveGraphicsWindow, GraphicsAnimationTimeline
+from spritoglobin_dx.render import SpriteRenderer
 
 
 class FileImportWindow(QtWidgets.QDialog):
@@ -242,6 +243,7 @@ class GifExportWindow(QtWidgets.QDialog):
             min_scale = 0.5,
             max_scale = 16.0,
             grid_size = 32,
+            three_dimensional = True,
         )
         self.gif_preview.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
         self.gif_preview.setMinimumWidth(514)
@@ -337,17 +339,29 @@ class GifExportWindow(QtWidgets.QDialog):
         color_animation = -1
         if self.color_anim_list_box.currentIndex() != 0:
             color_animation = int(self.color_anim_list_box.currentText())
-
-        img, size, offset = self.obj_data.get_sprite_with_offset(
+        
+        img_data = self.obj_data.get_sprite_part_entities(
             object_name      = self.obj_data.cached_object.name, 
             animation_index  = anim,
             color_anim_index = color_animation,
         )
-        
-        if img is not None:
-            self.gif_preview.draw_image(QtGui.QImage(img, *size, QtGui.QImage.Format_RGBA8888), offset)
-        else:
-            self.gif_preview.draw_image(None, (0, 0))
+    
+        base_sprite = [
+            img_data,  # sprite parts list
+            (0, 0, 0), # translation
+            (0, 0, 0), # rotation
+            (1, 1, 1), # scale
+        ]
+
+        palette = self.obj_data.get_object_palette(
+            object_name      = self.obj_data.cached_object.name, 
+            animation_index  = anim,
+            color_anim_index = color_animation,
+        )
+
+        fragment_light = [(1.0, 1.0, 1.0, 1.0), (0.0, 0.0, 0.0, 1.0)]
+
+        self.gif_preview.draw_3d_image([[base_sprite], palette, fragment_light])
 
         animation_properties = self.obj_data.get_animation_properties(
             object_name     = self.obj_data.cached_object.name,
@@ -516,6 +530,8 @@ class GifExportWindow(QtWidgets.QDialog):
         # 60 / 50 fps, 30 / 25 fps
         advance_amt = [ 1,  2][framerate]
         
+        scale = 1
+        
         self.obj_data.init_timers()
 
         # gather all the image data
@@ -543,9 +559,8 @@ class GifExportWindow(QtWidgets.QDialog):
                     object_name      = object_name, 
                     animation_index  = anim,
                     color_anim_index = color_animation,
+                    bypass_shader    = True,
                 )
-
-                image_data.append([img, (w, h), (x, y)])
 
                 if img is not None:
                     min_x, max_x, min_y, max_y = [
@@ -554,6 +569,31 @@ class GifExportWindow(QtWidgets.QDialog):
                         min(min_y,  y - h,), # down
                         max(max_y,  y,    ), # up
                     ]
+                
+                img = self.obj_data.get_sprite_part_entities(
+                    object_name      = object_name, 
+                    animation_index  = anim,
+                    color_anim_index = color_animation,
+                )
+    
+                base_sprite = [
+                    img,  # sprite parts list
+                    (0, 0, 0), # translation
+                    (0, 0, 0), # rotation
+                    (1, 1, 1), # scale
+                ]
+
+                palette = self.obj_data.get_object_palette(
+                    object_name      = object_name, 
+                    animation_index  = anim,
+                    color_anim_index = color_animation,
+                )
+
+                fragment_light = [(1.0, 1.0, 1.0, 1.0), (0.0, 0.0, 0.0, 1.0)]
+
+                img = [[base_sprite], palette, fragment_light]
+
+                image_data.append(img)
 
                 self.obj_data.increment_timers(
                     advance_amt,
@@ -562,24 +602,43 @@ class GifExportWindow(QtWidgets.QDialog):
                 )
 
         # compile the image data
+        padding_amt = 3
+
         image_array = []
         image_size = [
-            -min_x + max_x,
-            -min_y + max_y,
+            round((-min_x + max_x + (padding_amt * 2)) * scale),
+            round((-min_y + max_y + (padding_amt * 2)) * scale),
         ]
+        center = [
+            ((-min_x) + padding_amt) * scale,
+            ((-min_y) + padding_amt) * scale,
+        ]
+
+        self.renderer = SpriteRenderer(image_size)
         
         test_img = Image.new("RGBA", image_size)
 
-        for img, (w, h), (x, y) in image_data:
+        for img in image_data:
             img_out = Image.new("RGBA", image_size)
 
-            if img is not None:
-                img_raw = Image.frombytes("RGBA", (w, h), img)
+            img = self.renderer.render_object_scene(
+                global_translation = (
+                    float(center[0] / scale),
+                    float(center[1] / scale),
+                    -0.5),
+                global_rotation = (
+                    0,
+                    0,
+                    0),
+                global_scale = (
+                    float(scale),
+                    float(scale),
+                    1),
+                img_data = img,
+            )
 
-                x_out = -x - min_x
-                y_out = max_y - y
-
-                img_out.paste(img_raw, (x_out, y_out), img_raw)
+            img = Image.frombytes("RGBA", image_size, img)
+            img_out.paste(img, (0, 0), img)
 
             image_array.append(img_out)
             test_img.alpha_composite(img_out)
@@ -623,6 +682,7 @@ class GifExportWindow(QtWidgets.QDialog):
             self.tr("ExportFileSuccessBlurb").format(filename),
         )
 
+        self.gif_preview.resizeEvent()
         self.animation_timer.start()
 
 
@@ -720,6 +780,7 @@ class ProgramThemeEditor(QtWidgets.QWidget):
             min_scale = 1.0,
             max_scale = 4.0,
             grid_size = 16,
+            three_dimensional = True,
         )
         self.graphics_window_preview.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
         self.graphics_window_preview.setMinimumWidth(128)
