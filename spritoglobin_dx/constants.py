@@ -61,6 +61,7 @@ LANGUAGES = { # display name, NDS value, 3DS key, github documentation language 
     "pt_PT": ["Português",    -1, "EU_pt", "pt"],
     "ru_RU": ["Русский",      -1, "EU_ru", "ru"],
     "es_ES": ["Español (ES)",  5, "EU_sp", "es"],
+    "pl_PL": ["Polski",       -1,  None  , "en"], # no github language
 }
 
 
