@@ -772,6 +772,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
         if reset_ui:
             save_obj = self.obj_list_box.currentText()
+            save_all = [self.obj_list_box.itemText(i) for i in range(self.obj_list_box.count())]
             save_ans = self.anim_list_box.currentRow()
             save_anc = self.color_anim_list_box.currentRow()
             save_gos = self.animation_timer_going
@@ -782,9 +783,17 @@ class MainWindow(QtWidgets.QMainWindow):
             if self.obj_data is not None:
                 save_tmr = self.obj_data.get_timers(animation_timer = True, color_timer = True)
 
+
             self.init_ui()
 
+
+            self.obj_list_box.blockSignals(True)
+            self.obj_list_box.clear()
+            self.obj_list_box.addItems(save_all)
+            self.obj_list_box.blockSignals(False)
             self.obj_list_box.setCurrentText(save_obj)
+            self.change_object()
+
             self.anim_list_box.setCurrentRow(save_ans)
             self.color_anim_list_box.setCurrentRow(save_anc)
             self.animation_timer_going = save_gos
