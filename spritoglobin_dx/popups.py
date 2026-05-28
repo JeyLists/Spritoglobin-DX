@@ -201,13 +201,13 @@ class GifExportWindow(QtWidgets.QDialog):
         self.color_anim_list_box.currentIndexChanged.connect(self.reset_timer)
 
         self.speed_controller = QtWidgets.QDoubleSpinBox()
-        self.speed_controller.setRange(0.1, 100)
+        self.speed_controller.setRange(0.1, 1000)
         self.speed_controller.setSingleStep(0.05)
         self.speed_controller.setDecimals(4)
         self.speed_controller.setValue(1)
 
         self.scale_controller = QtWidgets.QDoubleSpinBox()
-        self.scale_controller.setRange(0.1, 100)
+        self.scale_controller.setRange(0.1, 1000)
         self.scale_controller.setSingleStep(0.1)
         self.scale_controller.setDecimals(4)
         self.scale_controller.setValue(1)
@@ -236,7 +236,7 @@ class GifExportWindow(QtWidgets.QDialog):
 
         self.loop_choose_spin_box = QtWidgets.QSpinBox()
         self.loop_choose_spin_box.setMinimum(1)
-        self.loop_choose_spin_box.setMaximum(999)
+        self.loop_choose_spin_box.setMaximum(1000)
         self.loop_choose_spin_box.valueChanged.connect(self.change_current_anim_data)
 
         self.export_button = QtWidgets.QPushButton(self.tr("ExportAcceptButton"))
