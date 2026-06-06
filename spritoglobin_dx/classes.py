@@ -87,26 +87,26 @@ class ObjFile:
             # for testing DT
             use_force = False
             force_root = "DT/BObjMon"
-            force = (f"{force_root}/0220.dat", f"{force_root}/0221.dat", f"{force_root}/0254.dat")
+            force = (0x220, 0x221, 0x254)
 
             self.cached_object.name = object_name
 
-            if not use_force or not force[0]:
+            if not use_force or not force[0] is not None:
                 self.cached_object.obj_anim_data = self.AnimData(self.data_files[current_obj_data.anim_file].blz77_decompress_data(), self.game_id)
             else:
-                with open(force[0], "rb") as test:
+                with open(f"{force_root}/{force[0]:04X}.dat", "rb") as test:
                     self.cached_object.obj_anim_data = self.AnimData(test.read(), self.game_id)
 
-            if not use_force or not force[1]:
+            if not use_force or not force[1] is not None:
                 self.cached_object.graph_file = self.data_files[current_obj_data.graph_file].blz77_decompress_data()
             else:
-                with open(force[1], "rb") as test:
+                with open(f"{force_root}/{force[1]:04X}.dat", "rb") as test:
                     self.cached_object.graph_file = test.read()
 
-            if not use_force or not force[2]:
+            if not use_force or not force[2] is not None:
                 self.cached_object.color_data = self.ColorData(self.data_files[current_obj_data.color_file].blz77_decompress_data())
             else:
-                with open(force[2], "rb") as test:
+                with open(f"{force_root}/{force[2]:04X}.dat", "rb") as test:
                     self.cached_object.color_data = self.ColorData(test.read())
     
     def get_file_properties(self):
@@ -672,9 +672,9 @@ class ObjFile:
                     pass_dict["rgb_operand_0"]      = (combiner_operands >>  0) & 0xF
                     pass_dict["rgb_operand_1"]      = (combiner_operands >>  4) & 0xF
                     pass_dict["rgb_operand_2"]      = (combiner_operands >>  8) & 0xF
-                    pass_dict["alpha_operand_0"]    = (combiner_operands >> 16) & 0xF
-                    pass_dict["alpha_operand_1"]    = (combiner_operands >> 20) & 0xF
-                    pass_dict["alpha_operand_2"]    = (combiner_operands >> 24) & 0xF
+                    pass_dict["alpha_operand_0"]    = (combiner_operands >> 12) & 0xF
+                    pass_dict["alpha_operand_1"]    = (combiner_operands >> 16) & 0xF
+                    pass_dict["alpha_operand_2"]    = (combiner_operands >> 20) & 0xF
 
                     pass_dict["rgb_combine_mode"]   = (combine_modes >>  0) & 0xF
                     pass_dict["alpha_combine_mode"] = (combine_modes >> 16) & 0xF

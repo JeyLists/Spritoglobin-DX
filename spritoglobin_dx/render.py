@@ -213,7 +213,7 @@ class SpriteRenderer:
                     else if (rgb_index == 1) combineOut.rgb = source_0.rgb * source_1.rgb;
                     else if (rgb_index == 2) combineOut.rgb = source_0.rgb + source_1.rgb;
                     else if (rgb_index == 3) combineOut.rgb = (source_0.rgb - 0.5) + (source_1.rgb - 0.5);
-                    else if (rgb_index == 4) combineOut.rgb = mix(source_0.rgb, source_1.rgb, source_2.rgb);
+                    else if (rgb_index == 4) combineOut.rgb = mix(source_1.rgb, source_0.rgb, source_2.rgb);
                     else if (rgb_index == 5) combineOut.rgb = source_0.rgb - source_1.rgb;
                     else if (rgb_index == 6) {
                         vec3 source_0_n = (source_0.rgb * 2.0) - 1.0;
@@ -232,7 +232,7 @@ class SpriteRenderer:
                     else if (a_index == 1) combineOut.a = source_0.a * source_1.a;
                     else if (a_index == 2) combineOut.a = source_0.a + source_1.a;
                     else if (a_index == 3) combineOut.a = (source_0.a - 0.5) + (source_1.a - 0.5);
-                    else if (a_index == 4) combineOut.a = mix(source_0.a, source_1.a, source_2.a);
+                    else if (a_index == 4) combineOut.a = mix(source_1.a, source_0.a, source_2.a);
                     else if (a_index == 5) combineOut.a = source_0.a - source_1.a;
                     else if (a_index == 6) {
                         vec3 source_0_n = (source_0.rgb * 2.0) - 1.0;
