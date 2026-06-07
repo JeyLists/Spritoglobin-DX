@@ -28,6 +28,31 @@ class SpriteRenderer:
         else:
             self.filtering_mode = moderngl.NEAREST
         
+        main_passes = """
+            for (int i = 0; i < 6; i++) {
+                if (!passes[i].keep_going) break;
+
+                if (i >= 2) saved_buffer = buffer_save[i - 2];
+                else        saved_buffer = vec4(0.0);
+
+                source_0 = getSource(passes[i].rgb_source_0, passes[i].alpha_source_0, out_tex, saved_buffer, current_coord, passes[i].const_color_index);
+                source_1 = getSource(passes[i].rgb_source_1, passes[i].alpha_source_1, out_tex, saved_buffer, current_coord, passes[i].const_color_index);
+                source_2 = getSource(passes[i].rgb_source_2, passes[i].alpha_source_2, out_tex, saved_buffer, current_coord, passes[i].const_color_index);
+
+                source_0 = getOperand(passes[i].rgb_operand_0, passes[i].alpha_operand_0, source_0);
+                source_1 = getOperand(passes[i].rgb_operand_1, passes[i].alpha_operand_1, source_1);
+                source_2 = getOperand(passes[i].rgb_operand_2, passes[i].alpha_operand_2, source_2);
+
+                out_tex = getCombinedColor(passes[i].rgb_combine_mode, passes[i].alpha_combine_mode, source_0, source_1, source_2);
+
+                if (i < 4) {
+                    if (passes[i].write_rgb_buffer) temp_buffer.rgb = out_tex.rgb;
+                    if (passes[i].write_a_buffer)   temp_buffer.a   = out_tex.a;
+
+                    buffer_save[i] = temp_buffer;
+                }
+            }"""
+
         if pretty:
             main = """
                 float blur_radius = 0.3;
@@ -57,20 +82,10 @@ class SpriteRenderer:
                         }
 
                         out_tex = texture(u_texture_0, current_coord);
+                        vec4 temp_buffer = vec4(0.0);
+                        vec4 saved_buffer;
 
-                        for (int i = 0; i < 6; i++) {
-                            if (passes[i].keep_going == 0) break;
-
-                            source_0 = getSource(passes[i].rgb_source_0, passes[i].alpha_source_0, out_tex, current_coord, passes[i].const_color_index);
-                            source_1 = getSource(passes[i].rgb_source_1, passes[i].alpha_source_1, out_tex, current_coord, passes[i].const_color_index);
-                            source_2 = getSource(passes[i].rgb_source_2, passes[i].alpha_source_2, out_tex, current_coord, passes[i].const_color_index);
-
-                            source_0 = getOperand(passes[i].rgb_operand_0, passes[i].alpha_operand_0, source_0);
-                            source_1 = getOperand(passes[i].rgb_operand_1, passes[i].alpha_operand_1, source_1);
-                            source_2 = getOperand(passes[i].rgb_operand_2, passes[i].alpha_operand_2, source_2);
-
-                            out_tex = getCombinedColor(passes[i].rgb_combine_mode, passes[i].alpha_combine_mode, source_0, source_1, source_2);
-                        }
+                        """ + main_passes + """
                         
                         total_color += out_tex;
                     }
@@ -81,21 +96,11 @@ class SpriteRenderer:
             """
         else:
             main = """
-                out_tex = texture(u_texture_0, v_texcoord);
+                out_tex = texture(u_texture_0, current_coord);
+                vec4 temp_buffer = vec4(0.0);
+                vec4 saved_buffer;
 
-                for (int i = 0; i < 6; i++) {
-                    if (passes[i].keep_going == 0) break;
-
-                    vec4 source_0 = getSource(passes[i].rgb_source_0, passes[i].alpha_source_0, out_tex, v_texcoord, passes[i].const_color_index);
-                    vec4 source_1 = getSource(passes[i].rgb_source_1, passes[i].alpha_source_1, out_tex, v_texcoord, passes[i].const_color_index);
-                    vec4 source_2 = getSource(passes[i].rgb_source_2, passes[i].alpha_source_2, out_tex, v_texcoord, passes[i].const_color_index);
-
-                    source_0 = getOperand(passes[i].rgb_operand_0, passes[i].alpha_operand_0, source_0);
-                    source_1 = getOperand(passes[i].rgb_operand_1, passes[i].alpha_operand_1, source_1);
-                    source_2 = getOperand(passes[i].rgb_operand_2, passes[i].alpha_operand_2, source_2);
-
-                    out_tex = getCombinedColor(passes[i].rgb_combine_mode, passes[i].alpha_combine_mode, source_0, source_1, source_2);
-                }
+                """ + main_passes + """
 
                 f_color = out_tex;
                 if (f_color.a <= 0.0) discard;
@@ -126,6 +131,7 @@ class SpriteRenderer:
                 uniform vec4[16] u_globalPalette;
 
                 vec4 out_tex;
+                vec4[4] buffer_save = vec4[4](vec4(0.0), vec4(0.0), vec4(0.0), vec4(0.0));
 
                 in vec2 v_texcoord;
                 out vec4 f_color;
@@ -145,14 +151,18 @@ class SpriteRenderer:
                     int alpha_operand_2;
                     int rgb_combine_mode;
                     int alpha_combine_mode;
+                    bool write_rgb_buffer;
+                    bool write_a_buffer;
                     int const_color_index;
-                    int keep_going;
+                    bool keep_going;
+                    bool padding_12h;
+                    bool padding_13h;
                 };
                 layout(std140) uniform PassBlock {
                     Pass passes[6];
                 };
 
-                vec4 getSource(int rgb_index, int a_index, vec4 out_tex, vec2 uv, int global_color_index) {
+                vec4 getSource(int rgb_index, int a_index, vec4 out_tex, vec4 saved_buffer, vec2 uv, int global_color_index) {
                     vec4 source_out = vec4(1.0, 0.0, 1.0, 0.5);
 
                     if      (rgb_index == 0)  source_out.rgb = u_primary_color.rgb;
@@ -162,7 +172,7 @@ class SpriteRenderer:
                     else if (rgb_index == 4)  source_out.rgb = texture(u_texture_1, uv).rgb;
                     else if (rgb_index == 5)  source_out.rgb = texture(u_texture_2, uv).rgb;
                     else if (rgb_index == 6)  source_out.rgb = texture(u_texture_3, uv).rgb;
-                    else if (rgb_index == 13) source_out.rgb = vec3(0.0, 0.0, 0.0);
+                    else if (rgb_index == 13) source_out.rgb = saved_buffer.rgb;
                     else if (rgb_index == 14) source_out.rgb = u_globalPalette[global_color_index].rgb;
                     else if (rgb_index == 15) source_out.rgb = out_tex.rgb;
 
@@ -173,7 +183,7 @@ class SpriteRenderer:
                     else if (a_index == 4)  source_out.a = texture(u_texture_1, uv).a;
                     else if (a_index == 5)  source_out.a = texture(u_texture_2, uv).a;
                     else if (a_index == 6)  source_out.a = texture(u_texture_3, uv).a;
-                    else if (a_index == 13) source_out.a = 0.0;
+                    else if (a_index == 13) source_out.a = saved_buffer.a;
                     else if (a_index == 14) source_out.a = u_globalPalette[global_color_index].a;
                     else if (a_index == 15) source_out.a = out_tex.a;
 
@@ -353,12 +363,15 @@ class SpriteRenderer:
                     tex.repeat_y = False
                     tex.use(0)
 
+                    buffer_length = 20
+                    passes = 6
+                    buffer_full = buffer_length * passes
                     if renderer_data is not None:
-                        pass_data = [value for render_pass in renderer_data.pass_list for value in [*render_pass[0].values()] + [render_pass[1], 1]]
-                        pass_data.extend([0] * (96 - len(pass_data)))
-                        pass_bytes = struct.pack('96i', *pass_data)
+                        pass_data = [value for render_pass in renderer_data.pass_list for value in [*render_pass[0].values()] + [render_pass[1], 1, 0, 0]]
+                        pass_data.extend([0] * (buffer_full - len(pass_data)))
+                        pass_bytes = struct.pack(f'{buffer_full}i', *pass_data)
                     else:
-                        pass_bytes = struct.pack('96i', *bytes(96))
+                        pass_bytes = struct.pack(f'{buffer_full}i', *bytes(buffer_full))
 
                     pass_data_buffer = self.context.buffer(pass_bytes)
                     self.program['PassBlock'].binding = 0

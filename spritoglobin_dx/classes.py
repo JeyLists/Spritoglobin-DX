@@ -679,6 +679,9 @@ class ObjFile:
                     pass_dict["rgb_combine_mode"]   = (combine_modes >>  0) & 0xF
                     pass_dict["alpha_combine_mode"] = (combine_modes >> 16) & 0xF
 
+                    pass_dict["write_rgb_buffer"]   = 0
+                    pass_dict["write_a_buffer"]     = 0
+
                     self.pass_list.append([pass_dict])
 
                 input_data.seek(12 * (6 - pass_list_num), 1)
@@ -689,8 +692,11 @@ class ObjFile:
                 
                 input_data.seek(6 - pass_list_num, 1)
 
-                # TODO: unknown
-                unk1 = int.from_bytes(input_data.read(1), 'little', signed = True)
+                buffer_write_flags = int.from_bytes(input_data.read(2), 'little')
+                for i in range(4):
+                    current_flag = i
+                    self.pass_list[i][0]["write_rgb_buffer"] = (buffer_write_flags >> current_flag) & 1
+                    self.pass_list[i][0]["write_a_buffer"] = (buffer_write_flags >> (current_flag + 4)) & 1 # TODO: eventually figure out if this should be i + 4 or i + 8
 
                 if unused != 0: print(f"THE 'unused' VALUE IN CLASS ObjFile.AnimData.Renderer IS USED ACTUALLY: unused = {unused}")
     
