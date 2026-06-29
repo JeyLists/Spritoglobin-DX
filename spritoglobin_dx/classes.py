@@ -52,6 +52,11 @@ class ObjFile:
                     tests_completed = True
                     for file in self.cellanim_files:
                         test = self.AnimData(self.data_files[self.cellanim_files[file].anim_file].blz77_decompress_data(), game_key, test = True)
+
+                        # if file uses sprite sheet mode, move on
+                        if test.sprite_sheet_mode:
+                            continue
+
                         test_value = test.anim_offset + (test.anim_num * test.anim_size)
                         test_conditional = test_value == test.frame_offset
                         if not test_conditional:
@@ -86,8 +91,8 @@ class ObjFile:
 
             # for testing DT
             use_force = False
-            force_root = "DT/BObjMon"
-            force = (0x220, 0x221, 0x254)
+            force_root = "DT/FObjUI"
+            force = (0x130, 0x131, None)
 
             self.cached_object.name = object_name
 
@@ -153,12 +158,13 @@ class ObjFile:
         has_color_data = color_data.global_animations != {}
 
         return {
-            "animation_number": obj_data.anim_num,
-            "color_mode":       obj_data.color_mode,
-            "renderer_number":  obj_data.renderer_num,
-            "bounding_box":     obj_data.bounding_box,
-            "has_color_data":   has_color_data,
-            "color_data":       color_data.global_animations,
+            "animation_number":  obj_data.anim_num,
+            "color_mode":        obj_data.color_mode,
+            "renderer_number":   obj_data.renderer_num,
+            "bounding_box":      obj_data.bounding_box,
+            "has_color_data":    has_color_data,
+            "color_data":        color_data.global_animations,
+            "sprite_sheet_mode": obj_data.sprite_sheet_mode,
         }
     
     def get_animation_properties(self, object_name, animation_index):
@@ -615,7 +621,12 @@ class ObjFile:
     
             self.anim_offset = anim_offset
             self.frame_offset = frame_offset
-            self.part_offset = part_offset # TODO: implement Sprite Sheet Mode when this value is 0
+            if part_offset != 0:
+                self.sprite_sheet_mode = False
+                self.part_offset = part_offset
+            else:
+                self.sprite_sheet_mode = True
+                self.part_offset = anim_offset + (self.anim_num * self.anim_size)
             self.part_trans_offset = part_trans_offset
             self.full_trans_offset = full_trans_offset
             self.renderer_offset = renderer_offset
@@ -714,6 +725,53 @@ class ObjFile:
         class NormalMap: # TODO: idek if this is accurate, but it's probably something to do with lighting
             def __init__(self, input_data, game_id):
                 self.input_data = input_data # unknown
+        
+        class SpriteSheetPart:
+            def __init__(self, input_data, game_id, index):
+                input_data = BytesIO(input_data)
+
+                segment_group_list_size = 0xC
+                segment_list_size = 0x10
+                segment_graph_list_size = 0x8
+
+                # header
+                segment_group_list_offset = 8
+                segment_group_list_amt = int.from_bytes(input_data.read(2), 'little')
+                segment_list_offset = segment_group_list_offset + (segment_group_list_size * segment_group_list_amt)
+                segment_list_amt = int.from_bytes(input_data.read(2), 'little')
+                segment_graph_list_offset = segment_list_offset + (segment_list_size * segment_list_amt)
+
+                self.sheet_size = struct.unpack('<2H', input_data.read(4))
+
+                # segment group
+                input_data.seek(segment_group_list_offset + (segment_group_list_size * index))
+                # TODO: unknowns
+                first_segment, segment_amount, unk, self.x_offset, self.y_offset, unk = struct.unpack('<HHHhhH', input_data.read(segment_group_list_size))
+
+                # segment
+                self.segments = []
+                for i in range(segment_amount):
+                    segment_index = first_segment + i
+                    input_data.seek(segment_list_offset + (segment_list_size * segment_index))
+
+                    seg = self.Segment()
+
+                    # segment properties
+                    seg.set_properties(input_data.read(segment_list_size))
+
+                    # segment graph
+                    input_data.seek(segment_graph_list_offset + (segment_graph_list_size * seg.segment_graph_index))
+                    seg.set_graph(input_data.read(segment_graph_list_size))
+
+                    self.segments.append(seg)
+
+            class Segment:
+                def set_properties(self, input_data):
+                    # TODO: unknowns
+                    self.unk, self.unk, self.unk, self.transform, self.segment_graph_index, self.unk, self.unk, self.unk = struct.unpack('<HHHHHHHH', input_data)
+
+                def set_graph(self, input_data):
+                    self.graph_x, self.graph_y, self.graph_w, self.graph_h = struct.unpack('<4h', input_data)
     
         def get_data_at_offset(self, data_size, data_offset, index):
             self.input_data.seek(data_offset + (index * data_size))
@@ -735,8 +793,11 @@ class ObjFile:
         def get_part_data(self, index_num):
             data_size = self.part_size
             data_offset = self.part_offset
-    
-            return self.SpritePart(self.get_data_at_offset(data_size, data_offset, index_num), self.game_id)
+
+            if not self.sprite_sheet_mode:
+                return self.SpritePart(self.get_data_at_offset(data_size, data_offset, index_num), self.game_id)
+            else:
+                return self.SpriteSheetPart(self.get_data_at_offset(self.frame_offset - self.part_offset, data_offset, 0), self.game_id, index_num)
     
         def get_part_transform_data(self, index_num):
             data_size = self.part_trans_size

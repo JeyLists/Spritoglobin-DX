@@ -118,21 +118,38 @@ def get_sprite_graphic(obj_anim_data, graph_file, current_anim_index, color_anim
     return img, (graph_w, graph_h), (offset_x, offset_y)
 
 def get_sprite_part_set_bounding_box(obj_anim_data, first_part, total_parts, given_bounding_box = None):
+    # TODO: sprite sheet shit
     min_x, max_x, min_y, max_y = 0, 0, 0, 0
     for i in range(total_parts):
         part_data = obj_anim_data.get_part_data(first_part + i)
 
-        part_size = (part_data.oam_data) & 0b11
-        part_shape = (part_data.oam_data >> 2) & 0b11
-        w, h = SIZING_TABLE[part_shape][part_size]
+        # check for sprite sheet mode
+        if not obj_anim_data.sprite_sheet_mode:
+            part_size = (part_data.oam_data) & 0b11
+            part_shape = (part_data.oam_data >> 2) & 0b11
+            w, h = SIZING_TABLE[part_shape][part_size]
+            x, y = part_data.x_offset, part_data.y_offset
 
-        part_min_x = part_data.x_offset - (w // 2)
-        part_max_x = part_data.x_offset + (w // 2)
-        part_min_y = part_data.y_offset - (h // 2)
-        part_max_y = part_data.y_offset + (h // 2)
+            part_min_x = x - (w // 2)
+            part_max_x = x + (w // 2)
+            part_min_y = y - (h // 2)
+            part_max_y = y + (h // 2)
 
-        min_x, max_x = min(min_x, part_min_x), max(max_x, part_max_x)
-        min_y, max_y = min(min_y, part_min_y), max(max_y, part_max_y)
+            min_x, max_x = min(min_x, part_min_x), max(max_x, part_max_x)
+            min_y, max_y = min(min_y, part_min_y), max(max_y, part_max_y)
+        else:
+            for segment in part_data.segments:
+                w, h = segment.graph_w, segment.graph_h
+                x, y = -segment.graph_x, -segment.graph_y
+
+                part_min_x = x
+                part_max_x = x + w
+                part_min_y = y
+                part_max_y = y + h
+
+                min_x, max_x = min(min_x, part_min_x), max(max_x, part_max_x)
+                min_y, max_y = min(min_y, part_min_y), max(max_y, part_max_y)
+
     
     if given_bounding_box is not None:
         min_x, max_x, min_y, max_y = [
@@ -163,71 +180,108 @@ def get_sprite_part_set_graphic(obj_anim_data, graph_file, first_part, total_par
 
     sprite_part_list = []
     for i in reversed(range(total_parts)):
-        part_data = obj_anim_data.get_part_data(first_part + i)
-
-        if obj_anim_data.renderer_num > 0:
-            renderer_data = obj_anim_data.get_renderer_data(part_data.renderer)
+        part_data_master = obj_anim_data.get_part_data(first_part + i)
+        
+        # check for sprite sheet mode
+        if not obj_anim_data.sprite_sheet_mode:
+            part_data_full = [part_data_master]
         else:
-            renderer_data = None
-            # renderer_data = obj_anim_data.get_renderer_data(part_data.renderer)
+            part_data_full = reversed(part_data_master.segments)
 
-        alpha_divisor = None
-        if highlighted_part is not None and highlighted_part != i:
-            alpha_divisor = 3
+        for part_data in part_data_full:
+            if obj_anim_data.renderer_num > 0:
+                renderer_data = obj_anim_data.get_renderer_data(part_data.renderer)
+            else:
+                renderer_data = None
+                # renderer_data = obj_anim_data.get_renderer_data(part_data.renderer)
+
+            alpha_divisor = None
+            if highlighted_part is not None and highlighted_part != i:
+                alpha_divisor = 3
         
-        tile, tile_size = draw_part(
-            part_data     = part_data,
-            graph_file    = graph_file,
-            obj_anim_data = obj_anim_data,
-            alpha_divisor = alpha_divisor,
-        )
+            # check for sprite sheet mode
+            if not obj_anim_data.sprite_sheet_mode:
+                tile, tile_size = draw_part(
+                    part_data     = part_data,
+                    graph_file    = graph_file,
+                    obj_anim_data = obj_anim_data,
+                    alpha_divisor = alpha_divisor,
+                )
 
-        if color_data is not None and renderer_data is not None and not separate and not bypass_shader:
-            anim_data = obj_anim_data.get_anim_data(current_anim_index)
+                x_offset = part_data.x_offset
+                y_offset = part_data.y_offset
 
-            tile = apply_sprite_color(
-                img                     = tile,
-                obj_anim_data           = obj_anim_data,
-                color_data              = color_data,
-                renderer_data           = renderer_data,
-                default_renderer_colors = obj_anim_data.default_renderer_colors,
-                current_anim_index      = current_anim_index,
-                global_anim_index       = color_anim_index,
-                current_time_anim       = current_time_anim,
-                current_time_color      = current_time_color,
-                current_anim_length     = anim_data.anim_length
-            )
+                w = tile_size[0]
+                h = tile_size[1]
+                x = offset_x - (tile_size[0] // 2) + x_offset
+                y = offset_y - (tile_size[1] // 2) - y_offset
+            else:
+                tile, tile_size = draw_segment(
+                    segment_data  = part_data,
+                    graph_file    = graph_file,
+                    obj_anim_data = obj_anim_data,
+                    sheet_size    = part_data_master.sheet_size,
+                    alpha_divisor = alpha_divisor,
+                )
 
-        x = offset_x - (tile_size[0] // 2) + part_data.x_offset
-        y = offset_y - (tile_size[1] // 2) - part_data.y_offset
+                # TODO: what the fuck
+                x_offset = 0
+                y_offset = 0
 
-        w = tile_size[0]
-        h = tile_size[1]
+                w = tile_size[0]
+                h = tile_size[1]
+                x = x_offset
+                y = y_offset
 
-        if separate:
-            if matrix is None:
-                matrix = [1, 0, 0, 0, 1, 0]
+                if part_data.transform != 0:
+                    transform_data = obj_anim_data.get_part_transform_data(part_data.transform - 1)
+                    matrix = list(transform_data.matrix)
+                else:
+                    matrix = [1, 0, 0, 0, 1, 0]
+                    
+                matrix[2] = part_data_master.x_offset
+                matrix[5] = -part_data_master.y_offset
 
-            sprite_part_list.append([tile.flatten(), (w, h), (part_data.x_offset, part_data.y_offset), matrix, renderer_data])
-            continue
+            if color_data is not None and renderer_data is not None and not separate and not bypass_shader:
+                anim_data = obj_anim_data.get_anim_data(current_anim_index)
 
-        target_area = img[y:y+h, x:x+w].astype(numpy.float32)
-        tile = tile.astype(numpy.float32)
+                tile = apply_sprite_color(
+                    img                     = tile,
+                    obj_anim_data           = obj_anim_data,
+                    color_data              = color_data,
+                    renderer_data           = renderer_data,
+                    default_renderer_colors = obj_anim_data.default_renderer_colors,
+                    current_anim_index      = current_anim_index,
+                    global_anim_index       = color_anim_index,
+                    current_time_anim       = current_time_anim,
+                    current_time_color      = current_time_color,
+                    current_anim_length     = anim_data.anim_length
+                )
 
-        source_alpha = tile[..., 3:4] / 255.0
-        dest_alpha = target_area[..., 3:4] / 255.0
-        
-        alpha = source_alpha + dest_alpha * (1.0 - source_alpha)
-        # this used to be the method of preventing edges from looking bad, but as it turns out
-        # not every sprite part expands its color edges, and the ones that don't just look bad
-        is_dest_transparent = False # dest_alpha < 0.001
-        target_area[..., :3] = numpy.where(is_dest_transparent, tile[..., :3], target_area[..., :3])
+            if separate:
+                if matrix is None:
+                    matrix = [1, 0, 0, 0, 1, 0]
 
-        rgb = (tile[..., :3] * source_alpha + target_area[..., :3] * dest_alpha * (1.0 - source_alpha)) / numpy.maximum(alpha, 0.001)
-        rgb = numpy.where(alpha < 0.001, tile[..., :3], rgb)
-        
-        img[y:y+h, x:x+w, :3] = numpy.clip(rgb, 0, 255).astype(numpy.uint8)
-        img[y:y+h, x:x+w, 3] = numpy.clip(alpha * 255, 0, 255).astype(numpy.uint8).reshape(tile_size[1], tile_size[0])
+                sprite_part_list.append([tile.flatten(), (w, h), (x_offset, y_offset), matrix, renderer_data])
+                continue
+
+            target_area = img[y:y+h, x:x+w].astype(numpy.float32)
+            tile = tile.astype(numpy.float32)
+
+            source_alpha = tile[..., 3:4] / 255.0
+            dest_alpha = target_area[..., 3:4] / 255.0
+
+            alpha = source_alpha + dest_alpha * (1.0 - source_alpha)
+            # this used to be the method of preventing edges from looking bad, but as it turns out
+            # not every sprite part expands its color edges, and the ones that don't just look bad
+            is_dest_transparent = False # dest_alpha < 0.001
+            target_area[..., :3] = numpy.where(is_dest_transparent, tile[..., :3], target_area[..., :3])
+
+            rgb = (tile[..., :3] * source_alpha + target_area[..., :3] * dest_alpha * (1.0 - source_alpha)) / numpy.maximum(alpha, 0.001)
+            rgb = numpy.where(alpha < 0.001, tile[..., :3], rgb)
+
+            img[y:y+h, x:x+w, :3] = numpy.clip(rgb, 0, 255).astype(numpy.uint8)
+            img[y:y+h, x:x+w, 3] = numpy.clip(alpha * 255, 0, 255).astype(numpy.uint8).reshape(tile_size[1], tile_size[0])
 
     if separate:
         return sprite_part_list
@@ -265,6 +319,61 @@ def draw_part(part_data, graph_file, obj_anim_data, alpha_divisor = None, ignore
     size = ((img_width * img_height) * color_mode[1]) // 8
     raw = numpy.frombuffer(graph_file[start:start + size], dtype = numpy.uint8)
 
+    pixels = get_pixels_from_buffer(raw, color_mode, swizzle)
+    
+    tiles_x, tiles_y = img_width // 8, img_height // 8
+    
+    if alpha_divisor is not None:
+        pixels[..., 3] //= alpha_divisor
+    
+    out = pixels.reshape(tiles_y, tiles_x, 8, 8, 4).transpose(0, 2, 1, 3, 4)
+    out = out.reshape(img_height, img_width, 4)
+
+    if not ignore_flips:
+        if part_data.oam_data & 0x100 != 0:
+            out = cv2.flip(out, 1)
+        if part_data.oam_data & 0x200 != 0:
+            out = cv2.flip(out, 0)
+    
+    return out, (img_width, img_height)
+
+def draw_segment(segment_data, graph_file, obj_anim_data, sheet_size, alpha_divisor = None, ignore_flips = False):
+    img_width, img_height = sheet_size
+    color_mode = obj_anim_data.color_mode
+
+    tile_amt = (img_width * img_height) // 64
+    tile_offsets = numpy.arange(tile_amt)[:, None] * 64
+    swizzle = (tile_offsets + SWIZZLE_TABLE).flatten()
+    
+    start = 0
+    size = ((img_width * img_height) * color_mode[1]) // 8
+    raw = numpy.frombuffer(graph_file[start:start + size], dtype = numpy.uint8)
+
+    pixels = get_pixels_from_buffer(raw, color_mode, swizzle)
+    
+    tiles_x, tiles_y = img_width // 8, img_height // 8
+    
+    if alpha_divisor is not None:
+        pixels[..., 3] //= alpha_divisor
+    
+    out = pixels.reshape(tiles_y, tiles_x, 8, 8, 4).transpose(0, 2, 1, 3, 4)
+    out = out.reshape(img_height, img_width, 4)
+
+    
+    img_width, img_height = segment_data.graph_w, segment_data.graph_h
+    w, h = segment_data.graph_w, segment_data.graph_h
+    x, y = segment_data.graph_x, sheet_size[1] - segment_data.graph_y
+    out = out[y:y+h, x:x+w]
+
+    # if not ignore_flips:
+    #     if part_data.oam_data & 0x100 != 0:
+    #         out = cv2.flip(out, 1)
+    #     if part_data.oam_data & 0x200 != 0:
+    #         out = cv2.flip(out, 0)
+    
+    return out, (img_width, img_height)
+
+def get_pixels_from_buffer(raw, color_mode, swizzle):
     # for more info:
     # https://problemkaputt.de/gbatek-3ds-gpu-texture-formats.htm
 
@@ -362,25 +471,11 @@ def draw_part(part_data, graph_file, obj_anim_data, alpha_divisor = None, ignore
             color_block = (raw.view(numpy.uint64)[1::2]).reshape(-1, 4)
 
             pixels = etc1_decompress(color_block, alpha_block)
-    
-    tiles_x, tiles_y = img_width // 8, img_height // 8
 
     if not etc1:
         pixels = numpy.stack([r, g, b, a], axis=-1).astype(numpy.uint8)
     
-    if alpha_divisor is not None:
-        pixels[..., 3] //= alpha_divisor
-    
-    out = pixels.reshape(tiles_y, tiles_x, 8, 8, 4).transpose(0, 2, 1, 3, 4)
-    out = out.reshape(img_height, img_width, 4)
-
-    if not ignore_flips:
-        if part_data.oam_data & 0x100 != 0:
-            out = cv2.flip(out, 1)
-        if part_data.oam_data & 0x200 != 0:
-            out = cv2.flip(out, 0)
-    
-    return out, (img_width, img_height)
+    return pixels
 
 def apply_sprite_color(img, obj_anim_data, color_data, renderer_data, default_renderer_colors, current_anim_index, global_anim_index, current_time_anim, current_time_color, current_anim_length):
     anim_set = color_data.get_rgba(

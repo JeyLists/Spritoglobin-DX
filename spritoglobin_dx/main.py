@@ -483,9 +483,9 @@ class MainWindow(QtWidgets.QMainWindow):
 
 
 
-        sprite_part_info = QtWidgets.QFrame()
-        sprite_part_info.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
-        sprite_part_info_layout = QtWidgets.QGridLayout(sprite_part_info)
+        self.sprite_part_info = QtWidgets.QFrame()
+        self.sprite_part_info.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
+        sprite_part_info_layout = QtWidgets.QGridLayout(self.sprite_part_info)
         sprite_part_info_layout.setContentsMargins(0, 0, 0, 0)
 
         self.sprite_part_set_list_box = QtWidgets.QComboBox()
@@ -582,20 +582,19 @@ class MainWindow(QtWidgets.QMainWindow):
         string.setEnabled(False)
         sprite_part_info_layout.addWidget(string, 11, 0, 1, 2, alignment = QtCore.Qt.AlignmentFlag.AlignCenter)
 
-        try:
-            dist = importlib.metadata.distribution(APP_NAME)
-            ver_num = f"{APP_DISPLAY_NAME} v{dist.version}"
-        except PackageNotFoundError:
-            ver_num = "(Unknown Version)"
-
-        version_number = QtWidgets.QLabel(ver_num)
-        version_number.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
-        version_number.setAlignment(QtCore.Qt.AlignmentFlag.AlignBottom | QtCore.Qt.AlignmentFlag.AlignRight)
-        version_number.setEnabled(False)
-        sprite_part_info_layout.addWidget(version_number, 12, 0, 1, -1)
-
         sprite_part_info_layout.setColumnStretch(0, 1)
         sprite_part_info_layout.setColumnStretch(1, 1)
+
+
+
+        self.sprite_sheet_info = QtWidgets.QFrame()
+        self.sprite_sheet_info.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
+        sprite_sheet_info_layout = QtWidgets.QGridLayout(self.sprite_sheet_info)
+        sprite_sheet_info_layout.setContentsMargins(0, 0, 0, 0)
+
+        string = QtWidgets.QLabel("Sprite Sheet Info Display NYI")
+        string.setEnabled(False)
+        sprite_sheet_info_layout.addWidget(string, 0, 0, alignment = QtCore.Qt.AlignmentFlag.AlignCenter)
 
 
 
@@ -640,11 +639,23 @@ class MainWindow(QtWidgets.QMainWindow):
 
         main_layout.addWidget(lists_and_stuff, 0, 0, 1, 1)
         main_layout.addWidget(self.sprite_viewer, 0, 1, 1, 1)
-        main_layout.addWidget(self.timeline_tabs, 1, 0, 1, 2)
-        main_layout.addWidget(sprite_part_info, 0, 2, 2, 1)
+        main_layout.addWidget(self.timeline_tabs, 1, 0, 2, 2)
+        main_layout.addWidget(self.sprite_part_info, 0, 2, 2, 1)
+        main_layout.addWidget(self.sprite_sheet_info, 0, 2, 2, 1)
         main_layout.setColumnStretch(0, 1)
         main_layout.setColumnStretch(1, 5)
         main_layout.setColumnStretch(2, 2)
+
+        try:
+            dist = importlib.metadata.distribution(APP_NAME)
+            ver_num = f"{APP_DISPLAY_NAME} v{dist.version}"
+        except PackageNotFoundError:
+            ver_num = "(Unknown Version)"
+
+        version_number = QtWidgets.QLabel(ver_num)
+        version_number.setAlignment(QtCore.Qt.AlignmentFlag.AlignBottom | QtCore.Qt.AlignmentFlag.AlignRight)
+        version_number.setEnabled(False)
+        main_layout.addWidget(version_number, 2, 2)
 
         self.setCentralWidget(main)
         self.set_theme(update = False)
@@ -1258,12 +1269,22 @@ class MainWindow(QtWidgets.QMainWindow):
     
     def change_highlighted_sprite_part(self):
         if self.obj_data is None:
+            self.sprite_part_info.setHidden(False)
+            self.sprite_sheet_info.setHidden(True)
+
             self.sprite_part_viewer.bounding_boxes = []
             self.sprite_part_viewer.draw_image(None, (0, 0))
             self.set_highlighted_sprite_part_info(None)
             self.sprite_part_tile_viewer.bounding_boxes = []
             self.sprite_part_tile_viewer.draw_image(None, (0, 0))
             return
+        
+        sprite_sheet_mode = self.obj_data.get_object_properties(object_name = self.obj_list_box.currentText())["sprite_sheet_mode"]
+
+        self.sprite_part_info.setHidden(sprite_sheet_mode)
+        self.sprite_sheet_info.setHidden(not sprite_sheet_mode)
+
+        if sprite_sheet_mode: return
 
         sprite_part_set = self.all_sprite_part_sets[self.sprite_part_set_list_box.currentIndex()]
 
@@ -1315,7 +1336,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.sprite_part_tile_viewer.bounding_boxes = bounding_boxes
 
-        if self.sprite_part_list_box.currentIndex() != 0:
+        if self.sprite_part_list_box.currentIndex() != 0 and img is not None:
             self.sprite_part_tile_viewer.draw_image(QtGui.QImage(img, *size, QtGui.QImage.Format_RGBA8888), (size[0] // 2, size[1] // 2))
         else:
             self.sprite_part_tile_viewer.draw_image(None, (0, 0))
