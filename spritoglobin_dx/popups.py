@@ -200,7 +200,7 @@ class GifExportWindow(QtWidgets.QDialog):
 
         self.framerate_choose_box = QtWidgets.QComboBox()
         self.framerate_choose_box.addItems([
-            #: Framerate indicator, displays as "60 / 50 fps" and "30 / 25 fps" in English. Uses two numbers because GIFs have really weird speed limitations, unlike animated PNGs.
+            #: Framerate indicator, displays as "60 / 50 fps" and "30 / 25 fps" by default. Uses two numbers because GIFs have really weird speed limitations, unlike animated PNGs.
             self.tr("{0} fps").format("60 / 50"),
             self.tr("{0} fps").format("30 / 25"),
         ])

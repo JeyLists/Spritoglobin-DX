@@ -197,8 +197,9 @@ class MainWindow(QtWidgets.QMainWindow):
             if force:
                 QtWidgets.QMessageBox.critical(
                     self,
-                    self.tr("CheckUpdateErrorTitle"),
-                    self.tr("CheckUpdateErrorBlurb").format(e),
+                    #: Window title.
+                    self.tr("Update Check Failed"),
+                    self.tr("An error occured while checking for updates:\n\n{0}").format(e),
                 )
             return
         latest_release = latest_release_resp.json()
@@ -211,19 +212,20 @@ class MainWindow(QtWidgets.QMainWindow):
         if latest_ver <= skip_ver and not force:
             pass
         elif latest_ver > current_ver:
-            new_version_assurance_string = self.tr("CheckUpdateNewVersionAssurance")
+            new_version_assurance_string = self.tr("Don't worry about your program settings, those will be carried over between versions!")
 
             information_box = QtWidgets.QMessageBox(self)
             information_box.setTextFormat(QtCore.Qt.RichText)
-            information_box.setWindowTitle(self.tr("CheckUpdateNewVersionTitle"))
-            information_box.setText(self.tr("CheckUpdateNewVersionBlurb").format(
+            #: Window title.
+            information_box.setWindowTitle(self.tr("New Update Available"))
+            information_box.setText(self.tr("There's a new update available: {0}\n---\n{1}\n---\nDownload it on {2}").format(
                 f"<b>{latest_release['name']}</b>",
                 latest_release['body'],
                 f"<a href='{latest_release['html_url']}'>GitHub</a>.",
             ).replace("\n", "<br>") + f"<br><br><span style='color: rgb(127, 127, 127);'>{new_version_assurance_string}</span>")
 
-            remind_button = QtWidgets.QPushButton(self.tr("CheckUpdateNewVersionRemindOption"))
-            ignore_button = QtWidgets.QPushButton(self.tr("CheckUpdateNewVersionIgnoreOption"))
+            remind_button = QtWidgets.QPushButton(self.tr("Remind Me Later"))
+            ignore_button = QtWidgets.QPushButton(self.tr("Skip This Version"))
 
             information_box.addButton(remind_button, QtWidgets.QMessageBox.AcceptRole)
             information_box.addButton(ignore_button, QtWidgets.QMessageBox.ActionRole)
@@ -235,8 +237,9 @@ class MainWindow(QtWidgets.QMainWindow):
         elif force:
             QtWidgets.QMessageBox.information(
                 self,
-                self.tr("CheckUpdateUpToDateTitle"),
-                self.tr("CheckUpdateUpToDateBlurb"),
+                #: Window title.
+                self.tr("No New Updates"),
+                self.tr("You're all caught up! There are no new updates to download."),
             )
 
         update_config["timestamp"] = time.time()
@@ -254,49 +257,57 @@ class MainWindow(QtWidgets.QMainWindow):
             self.setWindowTitle(f"{os.path.basename(self.current_path)} ({self.game_title_strings[f"GameTitle{self.current_game_id}"]})")
 
     
-        menu_bar_file = menu_bar.addMenu(self.tr("MenuBarFileTitle"))
+        #: The "&" symbol will underline a letter and cause the option to be selectable by pressing the letter on your keyboard while holding Alt. Please ensure all letters that are given this property within each submenu and in the toolbar itself are unique, so all options can be selected this way.
+        menu_bar_file = menu_bar.addMenu(self.tr("&File"))
 
-        self.menu_bar_file_open_action = QtGui.QAction(self.tr("MenuBarFileOpenOption"), self)
+        #: The "&" symbol will underline a letter and cause the option to be selectable by pressing the letter on your keyboard while holding Alt. Please ensure all letters that are given this property within each submenu and in the toolbar itself are unique, so all options can be selected this way.
+        self.menu_bar_file_open_action = QtGui.QAction(self.tr("&Open File"), self)
         self.menu_bar_file_open_action.setShortcut(QtGui.QKeySequence.StandardKey.Open)
         self.menu_bar_file_open_action.triggered.connect(self.open_file)
         menu_bar_file.addAction(self.menu_bar_file_open_action)
 
-        self.menu_bar_file_close_action = QtGui.QAction(self.tr("MenuBarFileCloseOption"), self)
+        #: The "&" symbol will underline a letter and cause the option to be selectable by pressing the letter on your keyboard while holding Alt. Please ensure all letters that are given this property within each submenu and in the toolbar itself are unique, so all options can be selected this way.
+        self.menu_bar_file_close_action = QtGui.QAction(self.tr("&Close File"), self)
         self.menu_bar_file_close_action.setShortcut(QtGui.QKeySequence.StandardKey.Close)
         self.menu_bar_file_close_action.triggered.connect(self.close_file)
         menu_bar_file.addAction(self.menu_bar_file_close_action)
 
         menu_bar_file.addSeparator() # -----------------------------------------
 
-        self.menu_bar_file_quick_export_action = QtGui.QAction(self.tr("MenuBarFileQuickExportOption"), self)
+        #: The "&" symbol will underline a letter and cause the option to be selectable by pressing the letter on your keyboard while holding Alt. Please ensure all letters that are given this property within each submenu and in the toolbar itself are unique, so all options can be selected this way.
+        self.menu_bar_file_quick_export_action = QtGui.QAction(self.tr("Quick &Export Animation"), self)
         self.menu_bar_file_quick_export_action.setShortcut(QtGui.QKeySequence.StandardKey.Save)
         self.menu_bar_file_quick_export_action.triggered.connect(partial(self.export_file, True))
         menu_bar_file.addAction(self.menu_bar_file_quick_export_action)
 
-        self.menu_bar_file_export_action = QtGui.QAction(self.tr("MenuBarFileExportOption"), self)
+        #: The "&" symbol will underline a letter and cause the option to be selectable by pressing the letter on your keyboard while holding Alt. Please ensure all letters that are given this property within each submenu and in the toolbar itself are unique, so all options can be selected this way.
+        self.menu_bar_file_export_action = QtGui.QAction(self.tr("Export Animation &Sequence"), self)
         self.menu_bar_file_export_action.setShortcut(QtGui.QKeySequence.StandardKey.SaveAs)
         self.menu_bar_file_export_action.triggered.connect(partial(self.export_file, False))
         menu_bar_file.addAction(self.menu_bar_file_export_action)
 
         menu_bar_file.addSeparator() # -----------------------------------------
 
-        self.menu_bar_file_quit_action = QtGui.QAction(self.tr("MenuBarFileQuitOption"), self)
+        #: The "&" symbol will underline a letter and cause the option to be selectable by pressing the letter on your keyboard while holding Alt. Please ensure all letters that are given this property within each submenu and in the toolbar itself are unique, so all options can be selected this way.
+        self.menu_bar_file_quit_action = QtGui.QAction(self.tr("&Quit"), self)
         self.menu_bar_file_quit_action.setShortcut(QtGui.QKeySequence.StandardKey.Quit)
         self.menu_bar_file_quit_action.triggered.connect(QtWidgets.QApplication.quit)
         menu_bar_file.addAction(self.menu_bar_file_quit_action)
 
 
-        menu_bar_options = menu_bar.addMenu(self.tr("MenuBarOptionsTitle"))
+        #: The "&" symbol will underline a letter and cause the option to be selectable by pressing the letter on your keyboard while holding Alt. Please ensure all letters that are given this property within each submenu and in the toolbar itself are unique, so all options can be selected this way.
+        menu_bar_options = menu_bar.addMenu(self.tr("&Options"))
 
-        language_selector = QtWidgets.QMenu(self.tr("MenuBarOptionsLanguageOption"), self)
+        #: The "&" symbol will underline a letter and cause the option to be selectable by pressing the letter on your keyboard while holding Alt. Please ensure all letters that are given this property within each submenu and in the toolbar itself are unique, so all options can be selected this way.
+        language_selector = QtWidgets.QMenu(self.tr("&Language"), self)
         for i, lang_key in enumerate(LANGUAGES):
-            if not (LANG_DIR / f'{lang_key}.qm').exists() and not lang_key == "None": continue
+            if not (LANG_DIR / f'{lang_key}.qm').exists() and not lang_key == "None" and not lang_key == DEFAULT_LANGUAGE: continue
             lang = LANGUAGES[lang_key]
 
             lang_string = lang[0]
             if lang_string is None:
-                lang_string = self.tr("MenuBarOptionsLanguageSystem")
-            elif lang[4]:
+                lang_string = self.tr("<System Language>")
+            elif lang[5]:
                 lang_string += "⚠"
 
             if self.settings["language"] == lang_key:
@@ -308,13 +319,15 @@ class MainWindow(QtWidgets.QMainWindow):
                 partial(self.change_lang, lang_key)
             )
 
-        framerate_selector = QtWidgets.QMenu(self.tr("MenuBarOptionsFramerateOption"), self)
+        #: The "&" symbol will underline a letter and cause the option to be selectable by pressing the letter on your keyboard while holding Alt. Please ensure all letters that are given this property within each submenu and in the toolbar itself are unique, so all options can be selected this way.
+        framerate_selector = QtWidgets.QMenu(self.tr("&Framerate"), self)
         framerates = QtGui.QActionGroup(self)
         framerates.setExclusive(True)
         for i in range(2):
             string = [
-                self.tr("MenuBarOptionsFramerate").format(60),
-                self.tr("MenuBarOptionsFramerate").format(30),
+                #: Framerate indicator, displays as "60 fps" and "30 fps" by default.
+                self.tr("{0} fps").format(60),
+                self.tr("{0} fps").format(30),
             ][i]
 
             framerate_action = QtGui.QAction(string)
@@ -327,17 +340,20 @@ class MainWindow(QtWidgets.QMainWindow):
         framerate_selector.addActions(framerates.actions())
         framerate_selector.triggered.connect(self.set_framerate)
 
-        audio_mute = QtGui.QAction(self.tr("MenuBarOptionsMuteOption"), self)
+        #: The "&" symbol will underline a letter and cause the option to be selectable by pressing the letter on your keyboard while holding Alt. Please ensure all letters that are given this property within each submenu and in the toolbar itself are unique, so all options can be selected this way.
+        audio_mute = QtGui.QAction(self.tr("&Mute Audio"), self)
         audio_mute.setCheckable(True)
         audio_mute.setChecked(self.settings["muted"] == "True")
         audio_mute.toggled.connect(self.toggle_mute)
 
-        check_updates = QtGui.QAction(self.tr("MenuBarOptionsCheckUpdatesOption"), self)
+        #: The "&" symbol will underline a letter and cause the option to be selectable by pressing the letter on your keyboard while holding Alt. Please ensure all letters that are given this property within each submenu and in the toolbar itself are unique, so all options can be selected this way.
+        check_updates = QtGui.QAction(self.tr("&Auto Update Checks"), self)
         check_updates.setCheckable(True)
         check_updates.setChecked(self.settings["check_for_updates"] == "True")
         check_updates.toggled.connect(self.toggle_update_check)
 
-        theme_editor = QtGui.QAction(self.tr("MenuBarOptionsEditThemeOption"), self)
+        #: The "&" symbol will underline a letter and cause the option to be selectable by pressing the letter on your keyboard while holding Alt. Please ensure all letters that are given this property within each submenu and in the toolbar itself are unique, so all options can be selected this way.
+        theme_editor = QtGui.QAction(self.tr("&Edit Theme"), self)
         theme_editor.triggered.connect(self.edit_theme)
         
         menu_bar_options.addAction(theme_editor)
@@ -349,10 +365,12 @@ class MainWindow(QtWidgets.QMainWindow):
         menu_bar_options.addAction(check_updates)
 
     
-        menu_bar_help = menu_bar.addMenu(self.tr("MenuBarHelpTitle"))
+        #: The "&" symbol will underline a letter and cause the option to be selectable by pressing the letter on your keyboard while holding Alt. Please ensure all letters that are given this property within each submenu and in the toolbar itself are unique, so all options can be selected this way.
+        menu_bar_help = menu_bar.addMenu(self.tr("&Help"))
 
         menu_bar_help.addAction(
-            self.tr("MenuBarHelpCheckUpdates"),
+            #: The "&" symbol will underline a letter and cause the option to be selectable by pressing the letter on your keyboard while holding Alt. Please ensure all letters that are given this property within each submenu and in the toolbar itself are unique, so all options can be selected this way.
+            self.tr("&Check for Updates"),
             self.check_for_updates,
         )
 
@@ -450,7 +468,8 @@ class MainWindow(QtWidgets.QMainWindow):
         object_info_layout.addWidget(self.color_mode_info_text)
         self.color_mode_info_text.setVisible(False)
 
-        self.object_bounding_box_enable = QtWidgets.QCheckBox(self.tr("ShowBoundingBoxToggle"))
+        #: In BISDX, bounding boxes are defined in each animation and for the whole file as a 2D box around the graphic. This toggle shows and hides that.
+        self.object_bounding_box_enable = QtWidgets.QCheckBox(self.tr("Show Object Bounding Box"))
         self.object_bounding_box_enable.checkStateChanged.connect(self.update_sprite_viewer)
         object_info_layout.addWidget(self.object_bounding_box_enable)
 
@@ -458,7 +477,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
 
 
-        string = QtWidgets.QLabel(self.tr("ColorAnimSelectorTitle"))
+        string = QtWidgets.QLabel(self.tr("Color Animations:"))
         string.setBuddy(self.color_anim_list_box)
         string.setEnabled(False)
 
@@ -476,9 +495,10 @@ class MainWindow(QtWidgets.QMainWindow):
         self.timeline_tabs.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Fixed)
         self.timeline_tabs.setMinimumWidth(320)
         self.timeline_tabs.setTabPosition(QtWidgets.QTabWidget.South)
-        self.timeline_tabs.addTab(self.sprite_anim_timeline, self.tr("AnimationTabsSpriteAnimTitle"))
-        self.timeline_tabs.addTab(self.sprite_color_anim_timeline, self.tr("AnimationTabsSpriteColorAnimTitle"))
-        self.timeline_tabs.addTab(global_color_anim, self.tr("AnimationTabsSpriteGlobalAnimTitle"))
+        self.timeline_tabs.addTab(self.sprite_anim_timeline, self.tr("Sprite Animation"))
+        #: "Single" is an adjective of "Animation" rather than "Color." It refers to the fact that each sprite animation has a Single Animation for Color, rather than the Animation being of a Single Color.
+        self.timeline_tabs.addTab(self.sprite_color_anim_timeline, self.tr("Single Color Animation"))
+        self.timeline_tabs.addTab(global_color_anim, self.tr("Global Color Animation"))
         self.timeline_tabs.setAutoFillBackground(True)
 
 
@@ -493,7 +513,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.sprite_part_set_list_box.setSizePolicy(QtWidgets.QSizePolicy.Preferred, self.sprite_part_set_list_box.sizePolicy().verticalPolicy())
         sprite_part_info_layout.addWidget(self.sprite_part_set_list_box, 1, 0, 1, -1)
 
-        string = QtWidgets.QLabel(self.tr("SpritePartSetSelectorTitle"))
+        string = QtWidgets.QLabel(self.tr("Current Sprite Part Set:"))
         string.setBuddy(self.sprite_part_set_list_box)
         string.setEnabled(False)
         sprite_part_info_layout.addWidget(string, 0, 0, 1, -1)
@@ -518,7 +538,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.sprite_part_list_box.setSizePolicy(QtWidgets.QSizePolicy.Preferred, self.sprite_part_list_box.sizePolicy().verticalPolicy())
         sprite_part_info_layout.addWidget(self.sprite_part_list_box, 4, 0, 1, -1)
 
-        string = QtWidgets.QLabel(self.tr("SpritePartSelectorTitle"))
+        string = QtWidgets.QLabel(self.tr("Current Sprite Part:"))
         string.setBuddy(self.sprite_part_list_box)
         string.setEnabled(False)
         sprite_part_info_layout.addWidget(string, 3, 0, 1, -1)
@@ -607,12 +627,12 @@ class MainWindow(QtWidgets.QMainWindow):
         lists_and_stuff_layout.addWidget(object_info, 2, 0, 1, 2)
         lists_and_stuff_layout.addWidget(self.anim_list_box, 5, 0, 1, 2)
 
-        string = QtWidgets.QLabel(self.tr("ObjectSelectorTitle"))
+        string = QtWidgets.QLabel(self.tr("Current Object:"))
         string.setBuddy(self.obj_list_box)
         string.setEnabled(False)
         lists_and_stuff_layout.addWidget(string, 0, 0, 1, 2)
 
-        string = QtWidgets.QLabel(self.tr("AnimationSelectorTitle"))
+        string = QtWidgets.QLabel(self.tr("Animations:"))
         string.setBuddy(self.anim_list_box)
         string.setEnabled(False)
         lists_and_stuff_layout.addWidget(string, 4, 0, 1, 1)
@@ -698,8 +718,9 @@ class MainWindow(QtWidgets.QMainWindow):
         if self.obj_data is None:
             QtWidgets.QMessageBox.critical(
                 self,
-                self.tr("ExportFailNoDataTitle"),
-                self.tr("ExportFailNoDataBlurb"),
+                #: Window title.
+                self.tr("No Object Data"),
+                self.tr("There is no currently loaded Object data! Please load an Object archive before attempting to export a file."),
             )
             return
 
@@ -757,10 +778,6 @@ class MainWindow(QtWidgets.QMainWindow):
             self.default_translator.load(f"qt_{lang_key}.qm", default_path)
             QtCore.QCoreApplication.installTranslator(self.default_translator)
 
-        self.translator_fallback = QtCore.QTranslator()
-        if self.translator_fallback.load(str(LANG_DIR / 'en_US.qm')):
-            self.parent.installTranslator(self.translator_fallback)
-
         self.translator = QtCore.QTranslator()
         if self.translator.load(str(LANG_DIR / f'{lang_key}.qm')):
             self.parent.installTranslator(self.translator)
@@ -768,19 +785,29 @@ class MainWindow(QtWidgets.QMainWindow):
         QtCore.QLocale.setDefault(QtCore.QLocale(lang_key))
 
         self.game_title_strings = {
-            "GameTitleML1":  self.tr("GameTitleML1"),
-            "GameTitleML2":  self.tr("GameTitleML2"),
-            "GameTitleML3":  self.tr("GameTitleML3"),
-            "GameTitleML4":  self.tr("GameTitleML4"),
-            "GameTitleML5":  self.tr("GameTitleML5"),
-            "GameTitleML1R": self.tr("GameTitleML1R"),
-            "GameTitleML3R": self.tr("GameTitleML3R"),
+            #: If the game's title was not translated to your language and region, do not translate.
+            "GameTitleML1":  self.tr("Mario & Luigi: Superstar Saga"),
+            #: If the game's title was not translated to your language and region, do not translate.
+            "GameTitleML2":  self.tr("Mario & Luigi: Partners in Time"),
+            #: If the game's title was not translated to your language and region, do not translate.
+            "GameTitleML3":  self.tr("Mario & Luigi: Bowser's Inside Story"),
+            #: If the game's title was not translated to your language and region, do not translate.
+            "GameTitleML4":  self.tr("Mario & Luigi: Dream Team"),
+            #: If the game's title was not translated to your language and region, do not translate.
+            "GameTitleML5":  self.tr("Mario & Luigi: Paper Jam"),
+            #: If the game's title was not translated to your language and region, do not translate.
+            "GameTitleML1R": self.tr("Mario & Luigi: Superstar Saga + Bowser's Minions"),
+            #: If the game's title was not translated to your language and region, do not translate.
+            "GameTitleML3R": self.tr("Mario & Luigi: Bowser's Inside Story + Bowser Jr.'s Journey"),
         }
 
         self.generic_strings = {
-            True:  self.tr("GenericBooleanAffirmative"),
-            False: self.tr("GenericBooleanNegative"),
-            None:  self.tr("GenericDataNone"),
+            #: Can be "True" or "Yes" in your language, whichever seems more appropriate to you.
+            True:  self.tr("True"),
+            #: Can be "False" or "No" in your language, whichever seems more appropriate to you.
+            False: self.tr("False"),
+            #: Used whenever there are no options to choose from in a list that is usually populated.
+            None:  self.tr("None"),
         }
 
         self.write_config()
@@ -840,7 +867,8 @@ class MainWindow(QtWidgets.QMainWindow):
     
     def toggle_update_check(self, check):
         if check is None:
-            query_link_string = self.tr("CheckUpdateQueryLinkString")
+            #: Use Github's official terminology for your language's Privacy Statement if it exists. If not, do not translate.
+            query_link_string = self.tr("Privacy Statement")
             
             lang_key = self.settings["language"]
 
@@ -851,8 +879,9 @@ class MainWindow(QtWidgets.QMainWindow):
 
             check_updates_box = QtWidgets.QMessageBox(self)
             check_updates_box.setTextFormat(QtCore.Qt.RichText)
-            check_updates_box.setWindowTitle(self.tr("CheckUpdateQueryTitle"))
-            check_updates_box.setText(self.tr("CheckUpdateQueryBlurb").format(
+            #: Window title.
+            check_updates_box.setWindowTitle(self.tr("Automatic Update Checking"))
+            check_updates_box.setText(self.tr("Would you like to allow Spritoglobin DX to automatically connect to the internet and check for updates?\n\nThis can always be changed later in the options.\n\nNote: This will make a request to GitHub's servers, which will receive your IP address and process it as per their {0}.").format(
                 f"<a href='https://docs.github.com/{github_lang_key}/site-policy/privacy-policies/github-general-privacy-statement'>{query_link_string}</a>"
             ).replace("\n", "<br>"))
             check_updates_box.setStandardButtons(QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No)
@@ -1014,7 +1043,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
 
         self.color_mode_info_text.setVisible(True)
-        self.color_mode_info_text.setText(self.tr('ColorModeInfo').format(object_properties['color_mode'][0]))
+        self.color_mode_info_text.setText(self.tr('Color Mode: {0}').format(object_properties['color_mode'][0]))
 
 
         self.sprite_part_set_list_box.blockSignals(True)
@@ -1363,15 +1392,16 @@ class MainWindow(QtWidgets.QMainWindow):
 
             buffer_offset = ("?", "?")
         
-        self.sprite_part_graphics_buffer_info_text.setText(self.tr("SpritePartBufferOffset").format(*buffer_offset))
+        # The "h" after each value indicates that the preceding numbers are in hexadecimal, please do not change them.
+        self.sprite_part_graphics_buffer_info_text.setText(self.tr("Graphics Buffer Data: {0}h - {1}h").format(*buffer_offset))
 
         string = ""
 
         if sprite_part_properties is not None:
             self.sprite_part_info_text.setEnabled(True)
 
-            size = [self.tr("SpritePartSize0"), self.tr("SpritePartSize1"), self.tr("SpritePartSize2"), self.tr("SpritePartSize3")][sprite_part_properties["oam_size"]]
-            shape = [self.tr("SpritePartShape0"), self.tr("SpritePartShape1"), self.tr("SpritePartShape2")][sprite_part_properties["oam_shape"]]
+            size = [self.tr("0 (Small)"), self.tr("1 (Medium)"), self.tr("2 (Large)"), self.tr("3 (Extra Large)")][sprite_part_properties["oam_size"]]
+            shape = [self.tr("0 (Square)"), self.tr("1 (Wide)"), self.tr("2 (Tall)")][sprite_part_properties["oam_shape"]]
             px_size = sprite_part_properties["size"]
             h_flip = self.generic_strings[sprite_part_properties["horizontal_flip"]]
             v_flip = self.generic_strings[sprite_part_properties["vertical_flip"]]
@@ -1386,17 +1416,20 @@ class MainWindow(QtWidgets.QMainWindow):
             v_flip = "?"
             offset = ("?", "?")
 
-        string += self.tr("SpritePartSizeTitle").format(size)
+        string += self.tr("Size: {0}").format(size)
         string += "\n"
-        string += self.tr("SpritePartShapeTitle").format(shape)
+        string += self.tr("Shape: {0}").format(shape)
         string += "\n"
-        string += self.tr("SpritePartSizePixels").format(*px_size)
+        #: Measures the size in pixels of a graphic.
+        string += self.tr("({0}px, {1}px)").format(*px_size)
         string += "\n\n"
-        string += self.tr("SpritePartFlipHorizontal").format(h_flip)
+        #: Shortening of "Horizontal flip." Keep this string as short as possible as there isn't much horizontal space here.
+        string += self.tr("H. Flip: {0}").format(h_flip)
         string += "\n"
-        string += self.tr("SpritePartFlipVertical").format(v_flip)
+        #: Shortening of "Vertical flip." Keep this string as short as possible as there isn't much horizontal space here.
+        string += self.tr("V. Flip: {0}").format(v_flip)
         string += "\n\n"
-        string += self.tr("SpritePartOffset").format(*offset)
+        string += self.tr("Offset: ({0}px, {1}px)").format(*offset)
 
         self.sprite_part_info_text.setText(string)
 
@@ -1416,7 +1449,8 @@ class MainWindow(QtWidgets.QMainWindow):
 
             renderer_index = "?"
 
-        string += self.tr("SpritePartRendererTitle").format(renderer_index)
+        #: Refers to the current rendering payload that is sent to the PICA200 rendering pipeline on the 3DS.
+        string += self.tr("Renderer: {0}").format(renderer_index)
 
         self.sprite_part_renderer_info_text.setText(string)
     

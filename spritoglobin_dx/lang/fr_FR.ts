@@ -4,35 +4,35 @@
 <context>
     <name>ColorAnimationTimeline</name>
     <message>
-        <location filename="../gui.py" line="788"/>
+        <location filename="../gui.py" line="796"/>
         <source>Color:</source>
         <translation>Couleur :</translation>
     </message>
     <message>
-        <location filename="../gui.py" line="790"/>
+        <location filename="../gui.py" line="798"/>
         <source>Alpha:</source>
         <translation>Alpha :</translation>
     </message>
     <message>
-        <location filename="../gui.py" line="924"/>
+        <location filename="../gui.py" line="932"/>
         <source>Global Palette Color: {0}</source>
         <extracomment>This is referring to which color in the global palette (not an official name) is affected by the current color animation.</extracomment>
         <translation>Couleur de la palette globale : {0}</translation>
     </message>
     <message>
-        <location filename="../gui.py" line="927"/>
+        <location filename="../gui.py" line="935"/>
         <source>Persistent: {0}</source>
         <extracomment>Refers to whether a color animation continues to loop independently of the current sprite animation or not.</extracomment>
         <translation>Persistant : {0}</translation>
     </message>
     <message>
-        <location filename="../gui.py" line="969"/>
+        <location filename="../gui.py" line="977"/>
         <source>Start/End Colors:</source>
         <extracomment>Refers to the starting color and the ending color of the current keyframe.</extracomment>
         <translation>Commencer/terminer les couleurs :</translation>
     </message>
     <message>
-        <location filename="../gui.py" line="1023"/>
+        <location filename="../gui.py" line="1031"/>
         <source>Current Animation Layer ({0} Total)</source>
         <translation>Calque d&apos;animation actuel ({0} en tout)</translation>
     </message>
@@ -146,7 +146,7 @@
         <location filename="../popups.py" line="204"/>
         <location filename="../popups.py" line="205"/>
         <source>{0} fps</source>
-        <extracomment>Framerate indicator, displays as &quot;60 / 50 fps&quot; and &quot;30 / 25 fps&quot; in English. Uses two numbers because GIFs have really weird speed limitations, unlike animated PNGs.</extracomment>
+        <extracomment>Framerate indicator, displays as &quot;60 / 50 fps&quot; and &quot;30 / 25 fps&quot; by default. Uses two numbers because GIFs have really weird speed limitations, unlike animated PNGs.</extracomment>
         <translation>{0} FPS</translation>
     </message>
     <message>
@@ -221,94 +221,110 @@
 <context>
     <name>GraphicsAnimationTimeline</name>
     <message>
-        <location filename="../gui.py" line="565"/>
+        <location filename="../gui.py" line="566"/>
         <source>Show Animation Bounding Box</source>
+        <extracomment>In BISDX, bounding boxes are defined in each animation and for the whole file as a 2D box around the graphic. This toggle shows and hides that.</extracomment>
         <translation>Afficher les animations de la bounding box</translation>
     </message>
     <message>
-        <location filename="../gui.py" line="668"/>
-        <location filename="../gui.py" line="670"/>
-        <location filename="../gui.py" line="674"/>
+        <location filename="../gui.py" line="669"/>
+        <location filename="../gui.py" line="671"/>
+        <location filename="../gui.py" line="675"/>
         <source>Sprite Part(s) Used: {0}</source>
         <translation>Partie(s) de sprite utilisée(s) : {0}</translation>
     </message>
     <message>
-        <location filename="../gui.py" line="673"/>
+        <location filename="../gui.py" line="674"/>
         <source>No Sprite Parts Used!</source>
         <translation>Aucune partie de sprite utilisée !</translation>
     </message>
     <message>
-        <location filename="../gui.py" line="679"/>
-        <location filename="../gui.py" line="683"/>
+        <location filename="../gui.py" line="680"/>
+        <location filename="../gui.py" line="684"/>
         <source>Transformation Matrix Used: {0}</source>
         <translation>Moule(s) de transformation utilisé(s) : {0}</translation>
     </message>
     <message>
-        <location filename="../gui.py" line="682"/>
+        <location filename="../gui.py" line="683"/>
         <source>No Transformation Matrix Used!</source>
         <translation>Aucun moule de transformation utilisé !</translation>
     </message>
     <message>
-        <location filename="../gui.py" line="688"/>
+        <location filename="../gui.py" line="690"/>
         <source>(Rotation is Inverted)</source>
+        <extracomment>Under some circumstances, the affine matrix data for an image can be automatically modified so that its rotation appears inverted from the actual numbers. This appears in those circumstances, for clarity.</extracomment>
         <translation>(La rotation est inversée)</translation>
     </message>
     <message>
-        <location filename="../gui.py" line="702"/>
+        <location filename="../gui.py" line="705"/>
         <source>X Scale: {0}</source>
+        <extracomment>Part of affine matrix data.</extracomment>
         <translation>Taille X : {0}</translation>
     </message>
     <message>
-        <location filename="../gui.py" line="703"/>
+        <location filename="../gui.py" line="707"/>
         <source>X Shear: {0}</source>
+        <extracomment>Part of affine matrix data.</extracomment>
         <translation>Coupe X : {0}</translation>
     </message>
     <message>
-        <location filename="../gui.py" line="704"/>
+        <location filename="../gui.py" line="709"/>
         <source>X Position: {1}</source>
+        <extracomment>Part of affine matrix data.</extracomment>
         <translation>Position X : {1}</translation>
     </message>
     <message>
-        <location filename="../gui.py" line="705"/>
+        <location filename="../gui.py" line="711"/>
         <source>Y Shear: {0}</source>
+        <extracomment>Part of affine matrix data.</extracomment>
         <translation>Coupe Y : {0}</translation>
     </message>
     <message>
-        <location filename="../gui.py" line="706"/>
+        <location filename="../gui.py" line="713"/>
         <source>Y Scale: {0}</source>
+        <extracomment>Part of affine matrix data.</extracomment>
         <translation>Taille Y : {0}</translation>
     </message>
     <message>
-        <location filename="../gui.py" line="707"/>
+        <location filename="../gui.py" line="715"/>
         <source>Y Position: {1}</source>
+        <extracomment>Part of affine matrix data.</extracomment>
         <translation>Position Y : {1}</translation>
     </message>
 </context>
 <context>
     <name>MainWindow</name>
     <message>
-        <location filename="../main.py" line="200"/>
-        <source>CheckUpdateErrorTitle</source>
+        <location filename="../main.py" line="201"/>
+        <source>Update Check Failed</source>
+        <extracomment>Window title.</extracomment>
         <translation>Nouvelle mise à jour disponible</translation>
     </message>
     <message>
-        <location filename="../main.py" line="201"/>
-        <source>CheckUpdateErrorBlurb</source>
+        <location filename="../main.py" line="202"/>
+        <source>An error occured while checking for updates:
+
+{0}</source>
         <translation>Pas de nouvelles mises à jour</translation>
     </message>
     <message>
-        <location filename="../main.py" line="216"/>
-        <source>CheckUpdateNewVersionAssurance</source>
+        <location filename="../main.py" line="217"/>
+        <source>Don&apos;t worry about your program settings, those will be carried over between versions!</source>
         <translation>&amp;Recherche auto. de mises à jour</translation>
     </message>
     <message>
-        <location filename="../main.py" line="218"/>
-        <source>CheckUpdateNewVersionTitle</source>
+        <location filename="../main.py" line="220"/>
+        <source>New Update Available</source>
+        <extracomment>Window title.</extracomment>
         <translation>Vérification de mises à jour automatique</translation>
     </message>
     <message>
-        <location filename="../main.py" line="219"/>
-        <source>CheckUpdateNewVersionBlurb</source>
+        <location filename="../main.py" line="221"/>
+        <source>There&apos;s a new update available: {0}
+---
+{1}
+---
+Download it on {2}</source>
         <translation>Une nouvelle mise à jour est disponible : {0}
 ---
 {1}
@@ -316,224 +332,259 @@
 Installez-la ici : {2}</translation>
     </message>
     <message>
-        <location filename="../main.py" line="225"/>
-        <source>CheckUpdateNewVersionRemindOption</source>
+        <location filename="../main.py" line="227"/>
+        <source>Remind Me Later</source>
         <translation>Me rappeler plus tard</translation>
     </message>
     <message>
-        <location filename="../main.py" line="226"/>
-        <source>CheckUpdateNewVersionIgnoreOption</source>
+        <location filename="../main.py" line="228"/>
+        <source>Skip This Version</source>
         <translation>Passer cette version</translation>
     </message>
     <message>
-        <location filename="../main.py" line="238"/>
-        <source>CheckUpdateUpToDateTitle</source>
+        <location filename="../main.py" line="241"/>
+        <source>No New Updates</source>
+        <extracomment>Window title.</extracomment>
         <translation>Pas de nouvelles mises à jour</translation>
     </message>
     <message>
-        <location filename="../main.py" line="239"/>
-        <source>CheckUpdateUpToDateBlurb</source>
+        <location filename="../main.py" line="242"/>
+        <source>You&apos;re all caught up! There are no new updates to download.</source>
         <translation>Vous avez déjà tout ! Il n&apos;y a pas de nouvelles mises à jour à installer.</translation>
     </message>
     <message>
-        <location filename="../main.py" line="257"/>
-        <source>MenuBarFileTitle</source>
+        <location filename="../main.py" line="261"/>
+        <source>&amp;File</source>
+        <extracomment>The &quot;&amp;&quot; symbol will underline a letter and cause the option to be selectable by pressing the letter on your keyboard while holding Alt. Please ensure all letters that are given this property within each submenu and in the toolbar itself are unique, so all options can be selected this way.</extracomment>
         <translation>&amp;Fichier</translation>
     </message>
     <message>
-        <location filename="../main.py" line="259"/>
-        <source>MenuBarFileOpenOption</source>
+        <location filename="../main.py" line="264"/>
+        <source>&amp;Open File</source>
+        <extracomment>The &quot;&amp;&quot; symbol will underline a letter and cause the option to be selectable by pressing the letter on your keyboard while holding Alt. Please ensure all letters that are given this property within each submenu and in the toolbar itself are unique, so all options can be selected this way.</extracomment>
         <translation>&amp;Ouvrir un fichier</translation>
     </message>
     <message>
-        <location filename="../main.py" line="264"/>
-        <source>MenuBarFileCloseOption</source>
+        <location filename="../main.py" line="270"/>
+        <source>&amp;Close File</source>
+        <extracomment>The &quot;&amp;&quot; symbol will underline a letter and cause the option to be selectable by pressing the letter on your keyboard while holding Alt. Please ensure all letters that are given this property within each submenu and in the toolbar itself are unique, so all options can be selected this way.</extracomment>
         <translation>&amp;Fermer le fichier</translation>
     </message>
     <message>
-        <location filename="../main.py" line="271"/>
-        <source>MenuBarFileQuickExportOption</source>
+        <location filename="../main.py" line="278"/>
+        <source>Quick &amp;Export Animation</source>
+        <extracomment>The &quot;&amp;&quot; symbol will underline a letter and cause the option to be selectable by pressing the letter on your keyboard while holding Alt. Please ensure all letters that are given this property within each submenu and in the toolbar itself are unique, so all options can be selected this way.</extracomment>
         <translation>&amp;Exporter rapidement l&apos;animation</translation>
     </message>
     <message>
-        <location filename="../main.py" line="276"/>
-        <source>MenuBarFileExportOption</source>
+        <location filename="../main.py" line="284"/>
+        <source>Export Animation &amp;Sequence</source>
+        <extracomment>The &quot;&amp;&quot; symbol will underline a letter and cause the option to be selectable by pressing the letter on your keyboard while holding Alt. Please ensure all letters that are given this property within each submenu and in the toolbar itself are unique, so all options can be selected this way.</extracomment>
         <translation>Exporter la &amp;séquence d&apos;animation</translation>
     </message>
     <message>
-        <location filename="../main.py" line="283"/>
-        <source>MenuBarFileQuitOption</source>
+        <location filename="../main.py" line="292"/>
+        <source>&amp;Quit</source>
+        <extracomment>The &quot;&amp;&quot; symbol will underline a letter and cause the option to be selectable by pressing the letter on your keyboard while holding Alt. Please ensure all letters that are given this property within each submenu and in the toolbar itself are unique, so all options can be selected this way.</extracomment>
         <translation>&amp;Quitter</translation>
     </message>
     <message>
-        <location filename="../main.py" line="289"/>
-        <source>MenuBarOptionsTitle</source>
+        <location filename="../main.py" line="299"/>
+        <source>&amp;Options</source>
+        <extracomment>The &quot;&amp;&quot; symbol will underline a letter and cause the option to be selectable by pressing the letter on your keyboard while holding Alt. Please ensure all letters that are given this property within each submenu and in the toolbar itself are unique, so all options can be selected this way.</extracomment>
         <translation>&amp;Paramètres</translation>
     </message>
     <message>
-        <location filename="../main.py" line="291"/>
-        <source>MenuBarOptionsLanguageOption</source>
+        <location filename="../main.py" line="302"/>
+        <source>&amp;Language</source>
+        <extracomment>The &quot;&amp;&quot; symbol will underline a letter and cause the option to be selectable by pressing the letter on your keyboard while holding Alt. Please ensure all letters that are given this property within each submenu and in the toolbar itself are unique, so all options can be selected this way.</extracomment>
         <translation>&amp;Langue</translation>
     </message>
     <message>
-        <location filename="../main.py" line="299"/>
-        <source>MenuBarOptionsLanguageSystem</source>
+        <location filename="../main.py" line="310"/>
+        <source>&lt;System Language&gt;</source>
         <translation>&lt;Langue système&gt;</translation>
     </message>
     <message>
-        <location filename="../main.py" line="311"/>
-        <source>MenuBarOptionsFramerateOption</source>
+        <location filename="../main.py" line="323"/>
+        <source>&amp;Framerate</source>
+        <extracomment>The &quot;&amp;&quot; symbol will underline a letter and cause the option to be selectable by pressing the letter on your keyboard while holding Alt. Please ensure all letters that are given this property within each submenu and in the toolbar itself are unique, so all options can be selected this way.</extracomment>
         <translation>&amp;Fréquence d&apos;image</translation>
     </message>
     <message>
-        <location filename="../main.py" line="316"/>
-        <location filename="../main.py" line="317"/>
-        <source>MenuBarOptionsFramerate</source>
+        <location filename="../main.py" line="329"/>
+        <location filename="../main.py" line="330"/>
+        <source>{0} fps</source>
+        <extracomment>Framerate indicator, displays as &quot;60 fps&quot; and &quot;30 fps&quot; by default.</extracomment>
         <translation>{0} fps</translation>
     </message>
     <message>
-        <location filename="../main.py" line="330"/>
-        <source>MenuBarOptionsMuteOption</source>
+        <location filename="../main.py" line="344"/>
+        <source>&amp;Mute Audio</source>
+        <extracomment>The &quot;&amp;&quot; symbol will underline a letter and cause the option to be selectable by pressing the letter on your keyboard while holding Alt. Please ensure all letters that are given this property within each submenu and in the toolbar itself are unique, so all options can be selected this way.</extracomment>
         <translation>&amp;Couper l&apos;audio</translation>
     </message>
     <message>
-        <location filename="../main.py" line="335"/>
-        <source>MenuBarOptionsCheckUpdatesOption</source>
+        <location filename="../main.py" line="350"/>
+        <source>&amp;Auto Update Checks</source>
+        <extracomment>The &quot;&amp;&quot; symbol will underline a letter and cause the option to be selectable by pressing the letter on your keyboard while holding Alt. Please ensure all letters that are given this property within each submenu and in the toolbar itself are unique, so all options can be selected this way.</extracomment>
         <translation>&amp;Recherche auto. de mises à jour</translation>
     </message>
     <message>
-        <location filename="../main.py" line="340"/>
-        <source>MenuBarOptionsEditThemeOption</source>
+        <location filename="../main.py" line="356"/>
+        <source>&amp;Edit Theme</source>
+        <extracomment>The &quot;&amp;&quot; symbol will underline a letter and cause the option to be selectable by pressing the letter on your keyboard while holding Alt. Please ensure all letters that are given this property within each submenu and in the toolbar itself are unique, so all options can be selected this way.</extracomment>
         <translation>&amp;Modifier le thème</translation>
     </message>
     <message>
-        <location filename="../main.py" line="352"/>
-        <source>MenuBarHelpTitle</source>
+        <location filename="../main.py" line="369"/>
+        <source>&amp;Help</source>
+        <extracomment>The &quot;&amp;&quot; symbol will underline a letter and cause the option to be selectable by pressing the letter on your keyboard while holding Alt. Please ensure all letters that are given this property within each submenu and in the toolbar itself are unique, so all options can be selected this way.</extracomment>
         <translation>&amp;Aide</translation>
     </message>
     <message>
-        <location filename="../main.py" line="355"/>
-        <source>MenuBarHelpCheckUpdates</source>
+        <location filename="../main.py" line="373"/>
+        <source>&amp;Check for Updates</source>
+        <extracomment>The &quot;&amp;&quot; symbol will underline a letter and cause the option to be selectable by pressing the letter on your keyboard while holding Alt. Please ensure all letters that are given this property within each submenu and in the toolbar itself are unique, so all options can be selected this way.</extracomment>
         <translation>&amp;Rechercher des mises à jour</translation>
     </message>
     <message>
-        <location filename="../main.py" line="453"/>
-        <source>ShowBoundingBoxToggle</source>
+        <location filename="../main.py" line="472"/>
+        <source>Show Object Bounding Box</source>
+        <extracomment>In BISDX, bounding boxes are defined in each animation and for the whole file as a 2D box around the graphic. This toggle shows and hides that.</extracomment>
         <translation>Afficher la bounding box de l&apos;objet</translation>
     </message>
     <message>
-        <location filename="../main.py" line="461"/>
-        <source>ColorAnimSelectorTitle</source>
+        <location filename="../main.py" line="480"/>
+        <source>Color Animations:</source>
         <translation>Animations de couleur :</translation>
     </message>
     <message>
-        <location filename="../main.py" line="479"/>
-        <source>AnimationTabsSpriteAnimTitle</source>
+        <location filename="../main.py" line="498"/>
+        <source>Sprite Animation</source>
         <translation>Animation de sprite</translation>
     </message>
     <message>
-        <location filename="../main.py" line="480"/>
-        <source>AnimationTabsSpriteColorAnimTitle</source>
+        <location filename="../main.py" line="500"/>
+        <source>Single Color Animation</source>
+        <extracomment>&quot;Single&quot; is an adjective of &quot;Animation&quot; rather than &quot;Color.&quot; It refers to the fact that each sprite animation has a Single Animation for Color, rather than the Animation being of a Single Color.</extracomment>
         <translation>Animation unique de couleur</translation>
     </message>
     <message>
-        <location filename="../main.py" line="481"/>
-        <source>AnimationTabsSpriteGlobalAnimTitle</source>
+        <location filename="../main.py" line="501"/>
+        <source>Global Color Animation</source>
         <translation>Animation globale de couleur</translation>
     </message>
     <message>
-        <location filename="../main.py" line="496"/>
-        <source>SpritePartSetSelectorTitle</source>
+        <location filename="../main.py" line="516"/>
+        <source>Current Sprite Part Set:</source>
         <translation>Paramètre de la partie du sprite actuel :</translation>
     </message>
     <message>
-        <location filename="../main.py" line="521"/>
-        <source>SpritePartSelectorTitle</source>
+        <location filename="../main.py" line="541"/>
+        <source>Current Sprite Part:</source>
         <translation>Partie du sprite actuel :</translation>
     </message>
     <message>
-        <location filename="../main.py" line="611"/>
-        <source>ObjectSelectorTitle</source>
+        <location filename="../main.py" line="630"/>
+        <source>Current Object:</source>
         <translation>Objet actuel :</translation>
     </message>
     <message>
-        <location filename="../main.py" line="616"/>
-        <source>AnimationSelectorTitle</source>
+        <location filename="../main.py" line="635"/>
+        <source>Animations:</source>
         <translation>Animations :</translation>
     </message>
     <message>
-        <location filename="../main.py" line="690"/>
-        <source>ExportFailNoDataTitle</source>
+        <location filename="../main.py" line="722"/>
+        <source>No Object Data</source>
+        <extracomment>Window title.</extracomment>
         <translation>Aucune donnée d&apos;objet</translation>
     </message>
     <message>
-        <location filename="../main.py" line="691"/>
-        <source>ExportFailNoDataBlurb</source>
+        <location filename="../main.py" line="723"/>
+        <source>There is no currently loaded Object data! Please load an Object archive before attempting to export a file.</source>
         <translation>Il n&apos;y a actuellement aucune donnée d&apos;objet chargée ! Veuillez charger une archive objet avant d&apos;essayer d&apos;exporter un fichier</translation>
     </message>
     <message>
-        <location filename="../main.py" line="760"/>
-        <source>GameTitleML1</source>
-        <translation>Mario &amp; Luigi : Superstar Saga</translation>
+        <location filename="../main.py" line="793"/>
+        <source>Mario &amp; Luigi: Superstar Saga</source>
+        <extracomment>If the game&apos;s title was not translated to your language and region, do not translate.</extracomment>
+        <translation></translation>
     </message>
     <message>
-        <location filename="../main.py" line="761"/>
-        <source>GameTitleML2</source>
+        <location filename="../main.py" line="795"/>
+        <source>Mario &amp; Luigi: Partners in Time</source>
+        <extracomment>If the game&apos;s title was not translated to your language and region, do not translate.</extracomment>
         <translation>Mario &amp; Luigi : Les frères du temps</translation>
     </message>
     <message>
-        <location filename="../main.py" line="762"/>
-        <source>GameTitleML3</source>
+        <location filename="../main.py" line="797"/>
+        <source>Mario &amp; Luigi: Bowser&apos;s Inside Story</source>
+        <extracomment>If the game&apos;s title was not translated to your language and region, do not translate.</extracomment>
         <translation>Mario &amp; Luigi : Voyage au centre de Bowser</translation>
     </message>
     <message>
-        <location filename="../main.py" line="763"/>
-        <source>GameTitleML4</source>
+        <location filename="../main.py" line="799"/>
+        <source>Mario &amp; Luigi: Dream Team</source>
+        <extracomment>If the game&apos;s title was not translated to your language and region, do not translate.</extracomment>
         <translation>Mario &amp; Luigi : Dream Team Bros.</translation>
     </message>
     <message>
-        <location filename="../main.py" line="764"/>
-        <source>GameTitleML5</source>
+        <location filename="../main.py" line="801"/>
+        <source>Mario &amp; Luigi: Paper Jam</source>
+        <extracomment>If the game&apos;s title was not translated to your language and region, do not translate.</extracomment>
         <translation>Mario &amp; Luigi : Paper Jam Bros.</translation>
     </message>
     <message>
-        <location filename="../main.py" line="765"/>
-        <source>GameTitleML1R</source>
+        <location filename="../main.py" line="803"/>
+        <source>Mario &amp; Luigi: Superstar Saga + Bowser&apos;s Minions</source>
+        <extracomment>If the game&apos;s title was not translated to your language and region, do not translate.</extracomment>
         <translation>Mario &amp; Luigi : Superstar Saga + Les sbires de Bowser</translation>
     </message>
     <message>
-        <location filename="../main.py" line="766"/>
-        <source>GameTitleML3R</source>
+        <location filename="../main.py" line="805"/>
+        <source>Mario &amp; Luigi: Bowser&apos;s Inside Story + Bowser Jr.&apos;s Journey</source>
+        <extracomment>If the game&apos;s title was not translated to your language and region, do not translate.</extracomment>
         <translation>Mario &amp; Luigi : Voyage au centre de Bowser + L&apos;épopée de Bowser Jr.</translation>
     </message>
     <message>
-        <location filename="../main.py" line="770"/>
-        <source>GenericBooleanAffirmative</source>
+        <location filename="../main.py" line="810"/>
+        <source>True</source>
+        <extracomment>Can be &quot;True&quot; or &quot;Yes&quot; in your language, whichever seems more appropriate to you.</extracomment>
         <translation>oui</translation>
     </message>
     <message>
-        <location filename="../main.py" line="771"/>
-        <source>GenericBooleanNegative</source>
+        <location filename="../main.py" line="812"/>
+        <source>False</source>
+        <extracomment>Can be &quot;False&quot; or &quot;No&quot; in your language, whichever seems more appropriate to you.</extracomment>
         <translation>non</translation>
     </message>
     <message>
-        <location filename="../main.py" line="772"/>
-        <source>GenericDataNone</source>
+        <location filename="../main.py" line="814"/>
+        <source>None</source>
+        <extracomment>Used whenever there are no options to choose from in a list that is usually populated.</extracomment>
         <translation>aucun</translation>
     </message>
     <message>
-        <location filename="../main.py" line="834"/>
-        <source>CheckUpdateQueryLinkString</source>
+        <location filename="../main.py" line="877"/>
+        <source>Privacy Statement</source>
+        <extracomment>Use Github&apos;s official terminology for your language&apos;s Privacy Statement if it exists. If not, do not translate.</extracomment>
         <translation>Déclaration de confidentialité</translation>
     </message>
     <message>
-        <location filename="../main.py" line="843"/>
-        <source>CheckUpdateQueryTitle</source>
+        <location filename="../main.py" line="887"/>
+        <source>Automatic Update Checking</source>
+        <extracomment>Window title.</extracomment>
         <translation>Vérification de mises à jour automatique</translation>
     </message>
     <message>
-        <location filename="../main.py" line="844"/>
-        <source>CheckUpdateQueryBlurb</source>
+        <location filename="../main.py" line="888"/>
+        <source>Would you like to allow Spritoglobin DX to automatically connect to the internet and check for updates?
+
+This can always be changed later in the options.
+
+Note: This will make a request to GitHub&apos;s servers, which will receive your IP address and process it as per their {0}.</source>
         <translation>Autoriser Spritoglobin DX à se connecter automatiquement à Internet pour rechercher des mises à jour ?
 
 Cela peut toujours être changé dans les paramètres.
@@ -541,83 +592,87 @@ Cela peut toujours être changé dans les paramètres.
 Note : Cela créera une requête aux serveurs de GitHub, qui recevront votre adresse IP et l&apos;utiliseront selon leur {0}.</translation>
     </message>
     <message>
-        <location filename="../main.py" line="1006"/>
-        <source>ColorModeInfo</source>
+        <location filename="../main.py" line="1050"/>
+        <source>Color Mode: {0}</source>
         <translation>Mode de couleur : {0}</translation>
     </message>
     <message>
-        <location filename="../main.py" line="1345"/>
-        <source>SpritePartBufferOffset</source>
+        <location filename="../main.py" line="1400"/>
+        <source>Graphics Buffer Data: {0}h - {1}h</source>
         <translation>Données de tampon graphique : {0}h - {1}h</translation>
     </message>
     <message>
-        <location filename="../main.py" line="1352"/>
-        <source>SpritePartSize0</source>
+        <location filename="../main.py" line="1407"/>
+        <source>0 (Small)</source>
         <translation>0 (petite)</translation>
     </message>
     <message>
-        <location filename="../main.py" line="1352"/>
-        <source>SpritePartSize1</source>
+        <location filename="../main.py" line="1407"/>
+        <source>1 (Medium)</source>
         <translation>1 (moyenne)</translation>
     </message>
     <message>
-        <location filename="../main.py" line="1352"/>
-        <source>SpritePartSize2</source>
+        <location filename="../main.py" line="1407"/>
+        <source>2 (Large)</source>
         <translation>2 (grande)</translation>
     </message>
     <message>
-        <location filename="../main.py" line="1352"/>
-        <source>SpritePartSize3</source>
+        <location filename="../main.py" line="1407"/>
+        <source>3 (Extra Large)</source>
         <translation>3 (très grande)</translation>
     </message>
     <message>
-        <location filename="../main.py" line="1353"/>
-        <source>SpritePartShape0</source>
+        <location filename="../main.py" line="1408"/>
+        <source>0 (Square)</source>
         <translation>0 (carrée)</translation>
     </message>
     <message>
-        <location filename="../main.py" line="1353"/>
-        <source>SpritePartShape1</source>
+        <location filename="../main.py" line="1408"/>
+        <source>1 (Wide)</source>
         <translation>1 (large)</translation>
     </message>
     <message>
-        <location filename="../main.py" line="1353"/>
-        <source>SpritePartShape2</source>
+        <location filename="../main.py" line="1408"/>
+        <source>2 (Tall)</source>
         <translation>2 (haute)</translation>
     </message>
     <message>
-        <location filename="../main.py" line="1368"/>
-        <source>SpritePartSizeTitle</source>
+        <location filename="../main.py" line="1423"/>
+        <source>Size: {0}</source>
         <translation>Taille : {0}</translation>
     </message>
     <message>
-        <location filename="../main.py" line="1370"/>
-        <source>SpritePartShapeTitle</source>
+        <location filename="../main.py" line="1425"/>
+        <source>Shape: {0}</source>
         <translation>Forme : {0}</translation>
     </message>
     <message>
-        <location filename="../main.py" line="1372"/>
-        <source>SpritePartSizePixels</source>
+        <location filename="../main.py" line="1428"/>
+        <source>({0}px, {1}px)</source>
+        <extracomment>Measures the size in pixels of a graphic.</extracomment>
         <translation>({0} px, {1} px)</translation>
     </message>
     <message>
-        <location filename="../main.py" line="1374"/>
-        <source>SpritePartFlipHorizontal</source>
+        <location filename="../main.py" line="1431"/>
+        <source>H. Flip: {0}</source>
+        <extracomment>Shortening of &quot;Horizontal flip.&quot; Keep this string as short as possible as there isn&apos;t much horizontal space here.</extracomment>
         <translation>Ret. horizontal : {0}</translation>
     </message>
     <message>
-        <location filename="../main.py" line="1376"/>
-        <source>SpritePartFlipVertical</source>
+        <location filename="../main.py" line="1434"/>
+        <source>V. Flip: {0}</source>
+        <extracomment>Shortening of &quot;Vertical flip.&quot; Keep this string as short as possible as there isn&apos;t much horizontal space here.</extracomment>
         <translation>Ret. vertical : {0}</translation>
     </message>
     <message>
-        <location filename="../main.py" line="1378"/>
-        <source>SpritePartOffset</source>
+        <location filename="../main.py" line="1436"/>
+        <source>Offset: ({0}px, {1}px)</source>
         <translation>Offset : ({0}px, {1}px)</translation>
     </message>
     <message>
-        <location filename="../main.py" line="1398"/>
-        <source>SpritePartRendererTitle</source>
+        <location filename="../main.py" line="1457"/>
+        <source>Renderer: {0}</source>
+        <extracomment>Refers to the current rendering payload that is sent to the PICA200 rendering pipeline on the 3DS.</extracomment>
         <translation>Rendu : {0}</translation>
     </message>
 </context>

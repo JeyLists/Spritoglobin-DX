@@ -264,29 +264,35 @@
     <name>MainWindow</name>
     <message>
         <location filename="../main.py" line="225"/>
-        <source>CheckUpdateErrorTitle</source>
+        <source>Update Check Failed</source>
         <translation>Falha na verificação das atualizações</translation>
     </message>
     <message>
         <location filename="../main.py" line="226"/>
-        <source>CheckUpdateErrorBlurb</source>
+        <source>An error occured while checking for updates:
+
+{0}</source>
         <translation>Um erro aconteceu durante a verificação das atualizações :
 
 {0}</translation>
     </message>
     <message>
         <location filename="../main.py" line="241"/>
-        <source>CheckUpdateNewVersionAssurance</source>
+        <source>Don't worry about your program settings, those will be carried over between versions!</source>
         <translation>Não tem medo pelo as suas configurações do programo,serão mantidos durante a passagem na nova versão!</translation>
     </message>
     <message>
         <location filename="../main.py" line="243"/>
-        <source>CheckUpdateNewVersionTitle</source>
+        <source>New Update Available</source>
         <translation>Uma nova versão está disponível</translation>
     </message>
     <message>
         <location filename="../main.py" line="244"/>
-        <source>CheckUpdateNewVersionBlurb</source>
+        <source>There's a new update available: {0}
+---
+{1}
+---
+Download it on {2}</source>
         <translation>Uma nova versão está disponível : {0}
 ---
 {1}
@@ -295,213 +301,217 @@ Descarrega a aqui : {2}</translation>
     </message>
     <message>
         <location filename="../main.py" line="250"/>
-        <source>CheckUpdateNewVersionRemindOption</source>
+        <source>Remind Me Later</source>
         <translation>Lembre- me mais tarde</translation>
     </message>
     <message>
         <location filename="../main.py" line="251"/>
-        <source>CheckUpdateNewVersionIgnoreOption</source>
+        <source>Skip This Version</source>
         <translation>Saltar esta versão</translation>
     </message>
     <message>
         <location filename="../main.py" line="263"/>
-        <source>CheckUpdateUpToDateTitle</source>
+        <source>No New Updates</source>
         <translation>Nenhuma nova versão</translation>
     </message>
     <message>
         <location filename="../main.py" line="264"/>
-        <source>CheckUpdateUpToDateBlurb</source>
+        <source>You're all caught up! There are no new updates to download.</source>
         <translation>Já tem tudo! Não há nenhuma versão nova para descarregar.</translation>
     </message>
     <message>
         <location filename="../main.py" line="282"/>
-        <source>MenuBarFileTitle</source>
+        <source>&amp;File</source>
         <translation>&amp;Ficheiro</translation>
     </message>
     <message>
         <location filename="../main.py" line="286"/>
-        <source>MenuBarFileOpenOption</source>
+        <source>&amp;Open File</source>
         <translation>&amp;Abrir um ficheiro</translation>
     </message>
     <message>
         <location filename="../main.py" line="293"/>
-        <source>MenuBarFileCloseOption</source>
+        <source>&amp;Close File</source>
         <translation>&amp;Fechar o ficheiro</translation>
     </message>
     <message>
         <location filename="../main.py" line="302"/>
-        <source>MenuBarFileQuickExportOption</source>
+        <source>Quick &amp;Export Animation</source>
         <translation>&amp;Exportar rapidamente a animação</translation>
     </message>
     <message>
         <location filename="../main.py" line="309"/>
-        <source>MenuBarFileExportOption</source>
+        <source>Export Animation &amp;Sequence</source>
         <translation>Exportar a &amp;sequência da animação</translation>
     </message>
     <message>
         <location filename="../main.py" line="318"/>
-        <source>MenuBarFileQuitOption</source>
+        <source>&amp;Quit</source>
         <translation>&amp;Sair</translation>
     </message>
     <message>
         <location filename="../main.py" line="324"/>
-        <source>MenuBarOptionsTitle</source>
+        <source>&amp;Options</source>
         <translation>&amp;Configurações</translation>
     </message>
     <message>
         <location filename="../main.py" line="326"/>
-        <source>MenuBarOptionsLanguageOption</source>
+        <source>&amp;Language</source>
         <translation>&amp;Idioma</translation>
     </message>
     <message>
         <location filename="../main.py" line="338"/>
-        <source>MenuBarOptionsLanguageSystem</source>
+        <source>&lt;System Language&gt;</source>
         <translation>&lt;Idioma sistema&gt;</translation>
     </message>
     <message>
         <location filename="../main.py" line="347"/>
-        <source>MenuBarOptionsFramerateOption</source>
+        <source>&amp;Framerate</source>
         <translation>&amp;Taxa de quadros</translation>
     </message>
     <message>
         <location filename="../main.py" line="352"/>
         <location filename="../main.py" line="353"/>
-        <source>MenuBarOptionsFramerate</source>
+        <source>{0} fps</source>
         <translation>{0} fps</translation>
     </message>
     <message>
         <location filename="../main.py" line="366"/>
-        <source>MenuBarOptionsMuteOption</source>
+        <source>&amp;Mute Audio</source>
         <translation>&amp;Cortar o som</translation>
     </message>
     <message>
         <location filename="../main.py" line="371"/>
-        <source>MenuBarOptionsCheckUpdatesOption</source>
+        <source>&amp;Auto Update Checks</source>
         <translation>&amp;Procura automática. de ações</translation>
     </message>
     <message>
         <location filename="../main.py" line="383"/>
-        <source>MenuBarHelpTitle</source>
+        <source>&amp;Help</source>
         <translation>&amp;Ajuda</translation>
     </message>
     <message>
         <location filename="../main.py" line="387"/>
-        <source>MenuBarHelpCheckUpdates</source>
+        <source>&amp;Check for Updates</source>
         <translation>&amp;Procurar atualizações</translation>
     </message>
     <message>
         <location filename="../main.py" line="480"/>
-        <source>ShowBoundingBoxToggle</source>
+        <source>Show Object Bounding Box</source>
         <translation>Mostrar a bouding box do objeto</translation>
     </message>
     <message>
         <location filename="../main.py" line="488"/>
-        <source>ColorAnimSelectorTitle</source>
+        <source>Color Animations:</source>
         <translation>Animações de cor :</translation>
     </message>
     <message>
         <location filename="../main.py" line="513"/>
-        <source>AnimationTabsSpriteAnimTitle</source>
+        <source>Sprite Animation</source>
         <translation>Animações de sprite</translation>
     </message>
     <message>
         <location filename="../main.py" line="514"/>
-        <source>AnimationTabsSpriteColorAnimTitle</source>
+        <source>Single Color Animation</source>
         <translation>Animação exclusiva de cor</translation>
     </message>
     <message>
         <location filename="../main.py" line="515"/>
-        <source>AnimationTabsSpriteGlobalAnimTitle</source>
+        <source>Global Color Animation</source>
         <translation>Animação global de cor</translation>
     </message>
     <message>
         <location filename="../main.py" line="530"/>
-        <source>SpritePartSetSelectorTitle</source>
+        <source>Current Sprite Part Set:</source>
         <translation>Definições da parte do sprite atual :</translation>
     </message>
     <message>
         <location filename="../main.py" line="554"/>
-        <source>SpritePartSelectorTitle</source>
+        <source>Current Sprite Part:</source>
         <translation>Parte do sprite atual :</translation>
     </message>
     <message>
         <location filename="../main.py" line="620"/>
-        <source>ObjectSelectorTitle</source>
+        <source>Current Object:</source>
         <translation>Objeto atual :</translation>
     </message>
     <message>
         <location filename="../main.py" line="625"/>
-        <source>AnimationSelectorTitle</source>
+        <source>Animations:</source>
         <translation>Animações :</translation>
     </message>
     <message>
         <location filename="../main.py" line="698"/>
-        <source>ExportFailNoDataTitle</source>
+        <source>No Object Data</source>
         <translation>Nenhum dados de objeto</translation>
     </message>
     <message>
         <location filename="../main.py" line="699"/>
-        <source>ExportFailNoDataBlurb</source>
+        <source>There is no currently loaded Object data! Please load an Object archive before attempting to export a file.</source>
         <translation>Neste momento, não tem nenhum dados de objeto carregado ! Por favor carrege um ficheiro objeto antes de tentar de exportar um ficheiro</translation>
     </message>
     <message>
         <location filename="../main.py" line="764"/>
-        <source>GameTitleML1</source>
+        <source>Mario &amp; Luigi: Superstar Saga</source>
         <translation>Mario &amp; Luigi: Superstar Saga</translation>
     </message>
     <message>
         <location filename="../main.py" line="765"/>
-        <source>GameTitleML2</source>
+        <source>Mario &amp; Luigi: Partners in Time</source>
         <translation>Mario &amp; Luigi: Os irmãos do tempo</translation>
     </message>
     <message>
         <location filename="../main.py" line="766"/>
-        <source>GameTitleML3</source>
+        <source>Mario &amp; Luigi: Bowser&apos;s Inside Story</source>
         <translation>Mario &amp; Luigi:Viagem no centro de Bowser</translation>
     </message>
     <message>
         <location filename="../main.py" line="767"/>
-        <source>GameTitleML4</source>
+        <source>Mario &amp; Luigi: Dream Team</source>
         <translation>Mario &amp; Luigi: Dream Team Bros.</translation>
     </message>
     <message>
         <location filename="../main.py" line="768"/>
-        <source>GameTitleML5</source>
+        <source>Mario &amp; Luigi: Paper Jam</source>
         <translation>Mario &amp; Luigi: Paper Jam Bros.</translation>
     </message>
     <message>
         <location filename="../main.py" line="769"/>
-        <source>GameTitleML1R</source>
+        <source>Mario &amp; Luigi: Superstar Saga + Bowser&apos;s Minions</source>
         <translation>Mario &amp; Luigi: Superstar Saga + Os capangas de Bowser</translation>
     </message>
     <message>
         <location filename="../main.py" line="770"/>
-        <source>GameTitleML3R</source>
+        <source>Mario &amp; Luigi: Bowser&apos;s Inside Story + Bowser Jr.&apos;s Journey</source>
         <translation>Mario &amp; Luigi: Viagem no centro de Bowser + A epopeia de Bowser Jr.</translation>
     </message>
     <message>
         <location filename="../main.py" line="774"/>
-        <source>GenericBooleanAffirmative</source>
+        <source>True</source>
         <translation>sim</translation>
     </message>
     <message>
         <location filename="../main.py" line="775"/>
-        <source>GenericBooleanNegative</source>
+        <source>False</source>
         <translation>não</translation>
     </message>
     <message>
         <location filename="../main.py" line="828"/>
-        <source>CheckUpdateQueryLinkString</source>
+        <source>Privacy Statement</source>
         <translation>Declaração Geral de Privacidade do Github</translation>
     </message>
     <message>
         <location filename="../main.py" line="837"/>
-        <source>CheckUpdateQueryTitle</source>
+        <source>Automatic Update Checking</source>
         <translation>Verificação de atualização automática</translation>
     </message>
     <message>
         <location filename="../main.py" line="838"/>
-        <source>CheckUpdateQueryBlurb</source>
+        <source>Would you like to allow Spritoglobin DX to automatically connect to the internet and check for updates?
+
+This can always be changed later in the options.
+
+Note: This will make a request to GitHub's servers, which will receive your IP address and process it as per their {0}.</source>
         <translation>Autorizar  Spritoglobin DX conectar- se automaticamente na Internet para procurar novas atualizações?
 
 Isso sempre poderá ser editado nas definições .
@@ -516,7 +526,7 @@ Nota : Isto criará um pedido aos servidores GitHub, que receberão o seu endere
     </message>
     <message>
         <location filename="../main.py" line="1002"/>
-        <source>ColorModeInfo</source>
+        <source>Color Mode: {0}</source>
         <translation>Modo de cor : {0}</translation>
     </message>
     <message>
@@ -526,77 +536,77 @@ Nota : Isto criará um pedido aos servidores GitHub, que receberão o seu endere
     </message>
     <message>
         <location filename="../main.py" line="1304"/>
-        <source>SpritePartBufferOffset</source>
+        <source>Graphics Buffer Data: {0}h - {1}h</source>
         <translation>Dados do carimbo gráfico : {0}h - {1}h</translation>
     </message>
     <message>
         <location filename="../main.py" line="1311"/>
-        <source>SpritePartSize0</source>
+        <source>0 (Small)</source>
         <translation>0 (pequeno)</translation>
     </message>
     <message>
         <location filename="../main.py" line="1311"/>
-        <source>SpritePartSize1</source>
+        <source>1 (Medium)</source>
         <translation>1 (médio)</translation>
     </message>
     <message>
         <location filename="../main.py" line="1311"/>
-        <source>SpritePartSize2</source>
+        <source>2 (Large)</source>
         <translation>2 (grande)</translation>
     </message>
     <message>
         <location filename="../main.py" line="1311"/>
-        <source>SpritePartSize3</source>
+        <source>3 (Extra Large)</source>
         <translation>3 (muito grande)</translation>
     </message>
     <message>
         <location filename="../main.py" line="1312"/>
-        <source>SpritePartShape0</source>
+        <source>0 (Square)</source>
         <translation>0 (quadrado)</translation>
     </message>
     <message>
         <location filename="../main.py" line="1312"/>
-        <source>SpritePartShape1</source>
+        <source>1 (Wide)</source>
         <translation>1 (larga)</translation>
     </message>
     <message>
         <location filename="../main.py" line="1312"/>
-        <source>SpritePartShape2</source>
+        <source>2 (Tall)</source>
         <translation>2 (alta)</translation>
     </message>
     <message>
         <location filename="../main.py" line="1327"/>
-        <source>SpritePartSizeTitle</source>
+        <source>Size: {0}</source>
         <translation>Tamanho :{0}</translation>
     </message>
     <message>
         <location filename="../main.py" line="1329"/>
-        <source>SpritePartShapeTitle</source>
+        <source>Shape: {0}</source>
         <translation>Forma : {0}</translation>
     </message>
     <message>
         <location filename="../main.py" line="1331"/>
-        <source>SpritePartSizePixels</source>
+        <source>({0}px, {1}px)</source>
         <translation>({0}px, {1}px)</translation>
     </message>
     <message>
         <location filename="../main.py" line="1333"/>
-        <source>SpritePartFlipHorizontal</source>
+        <source>H. Flip: {0}</source>
         <translation>Inverter.horizontalmente : {0}</translation>
     </message>
     <message>
         <location filename="../main.py" line="1335"/>
-        <source>SpritePartFlipVertical</source>
+        <source>V. Flip: {0}</source>
         <translation>Inverter verticalmente : {0}</translation>
     </message>
     <message>
         <location filename="../main.py" line="1337"/>
-        <source>SpritePartOffset</source>
+        <source>Offset: ({0}px, {1}px)</source>
         <translation>Offset : ({0}px, {1}px)</translation>
     </message>
     <message>
         <location filename="../main.py" line="1353"/>
-        <source>SpritePartRendererTitle</source>
+        <source>Renderer: {0}</source>
         <translation>Renderização : {0}</translation>
     </message>
 </context>

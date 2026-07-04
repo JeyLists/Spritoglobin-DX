@@ -562,6 +562,7 @@ class GraphicsAnimationTimeline(AnimationTimeline):
         self.minimal = minimal
 
         self.bounding_box_toggle = QtWidgets.QCheckBox()
+        #: In BISDX, bounding boxes are defined in each animation and for the whole file as a 2D box around the graphic. This toggle shows and hides that.
         self.bounding_box_toggle_string = QtWidgets.QLabel(self.tr("Show Animation Bounding Box"))
         self.bounding_box_toggle_string.setBuddy(self.bounding_box_toggle)
         self.bounding_box_toggle.setSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Minimum)

@@ -46,6 +46,7 @@ THEME_COLOR_ICON_MASKS = {
 }
 
 
+DEFAULT_LANGUAGE = "en_US"
 LANGUAGES = { # display name, NDS value, DT value, PJ+ value, github documentation language key, unfinished
     "None":  [None],
     "ja_JP": ["日本語",        0, 0x00, "JP_ja", "ja",  True],
