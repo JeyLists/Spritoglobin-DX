@@ -29,7 +29,7 @@ class ObjFile:
     def __init__(self, input_data, game_id = None):
         self.cellanim_files = {}
         self.data_files = {"": self.DataFile("", None)}
-        self.cached_object = self.ObjectCache(None)
+        self.cached_objects = {}
 
         try:
             bg4_extract, self.bg4_version, self.valid_entries, self.invalid_entries = self.bg4_extract(input_data)
@@ -53,9 +53,9 @@ class ObjFile:
                     for file in self.cellanim_files:
                         test = self.AnimData(self.data_files[self.cellanim_files[file].anim_file].blz77_decompress_data(), game_key, test = True)
 
-                        # if file uses sprite sheet mode, move on
-                        if test.sprite_sheet_mode:
-                            continue
+                        # if file uses sprite sheet mode, move on TODO: re-enable and finish
+                        # if test.sprite_sheet_mode:
+                        #     continue
 
                         test_value = test.anim_offset + (test.anim_num * test.anim_size)
                         test_conditional = test_value == test.frame_offset
@@ -85,8 +85,13 @@ class ObjFile:
         for file in self.cellanim_files:
             test = self.AnimData(self.data_files[self.cellanim_files[file].anim_file].blz77_decompress_data(), self.game_id)
     
-    def cache_object(self, object_name):
-        if self.cached_object.name != object_name:
+    def cache_object(self, object_name, cache_id = None):
+        if cache_id is None:
+            cache_id = "_main_"
+
+        cached_object = self.get_cached_object(cache_id)
+
+        if cached_object.name != object_name:
             current_obj_data = self.cellanim_files[object_name]
 
             # for testing DT
@@ -94,36 +99,45 @@ class ObjFile:
             force_root = "DT/FObjUI"
             force = (0x130, 0x131, None)
 
-            self.cached_object.name = object_name
+            cached_object.name = object_name
 
             if not use_force or not force[0] is not None:
-                self.cached_object.obj_anim_data = self.AnimData(self.data_files[current_obj_data.anim_file].blz77_decompress_data(), self.game_id)
+                cached_object.obj_anim_data = self.AnimData(self.data_files[current_obj_data.anim_file].blz77_decompress_data(), self.game_id)
             else:
                 with open(f"{force_root}/{force[0]:04X}.dat", "rb") as test:
-                    self.cached_object.obj_anim_data = self.AnimData(test.read(), "ML4")
+                    cached_object.obj_anim_data = self.AnimData(test.read(), "ML4")
 
             if not use_force or not force[1] is not None:
-                self.cached_object.graph_file = self.data_files[current_obj_data.graph_file].blz77_decompress_data()
+                cached_object.graph_file = self.data_files[current_obj_data.graph_file].blz77_decompress_data()
             else:
                 with open(f"{force_root}/{force[1]:04X}.dat", "rb") as test:
-                    self.cached_object.graph_file = test.read()
+                    cached_object.graph_file = test.read()
 
             if not use_force or not force[2] is not None:
-                self.cached_object.color_data = self.ColorData(self.data_files[current_obj_data.color_file].blz77_decompress_data())
+                cached_object.color_data = self.ColorData(self.data_files[current_obj_data.color_file].blz77_decompress_data())
             else:
                 with open(f"{force_root}/{force[2]:04X}.dat", "rb") as test:
-                    self.cached_object.color_data = self.ColorData(test.read())
+                    cached_object.color_data = self.ColorData(test.read())
+            
+            self.cached_objects[cache_id] = cached_object
+    
+    def get_cached_object(self, cache_id):
+        if cache_id is None:
+            cache_id = "_main_"
+
+        return self.cached_objects.get(cache_id, self.ObjectCache(None))
     
     def get_file_properties(self):
         return {
             "game_id": self.game_id,
         }
     
-    def get_object_palette(self, object_name, animation_index, color_anim_index = None):
-        self.cache_object(object_name)
+    def get_object_palette(self, object_name, animation_index, color_anim_index = None, cache_id = None):
+        self.cache_object(object_name, cache_id)
+        cached_object = self.get_cached_object(cache_id)
 
-        obj_data = self.cached_object.obj_anim_data
-        color_data = self.cached_object.color_data
+        obj_data = cached_object.obj_anim_data
+        color_data = cached_object.color_data
         anim_data = obj_data.get_anim_data(animation_index)
 
         try:
@@ -149,11 +163,12 @@ class ObjFile:
         
         return renderer_colors
     
-    def get_object_properties(self, object_name):
-        self.cache_object(object_name)
+    def get_object_properties(self, object_name, cache_id = None):
+        self.cache_object(object_name, cache_id)
+        cached_object = self.get_cached_object(cache_id)
 
-        obj_data = self.cached_object.obj_anim_data
-        color_data = self.cached_object.color_data
+        obj_data = cached_object.obj_anim_data
+        color_data = cached_object.color_data
 
         has_color_data = color_data.global_animations != {}
 
@@ -167,15 +182,16 @@ class ObjFile:
             "sprite_sheet_mode": obj_data.sprite_sheet_mode,
         }
     
-    def get_animation_properties(self, object_name, animation_index):
-        self.cache_object(object_name)
+    def get_animation_properties(self, object_name, animation_index, cache_id = None):
+        self.cache_object(object_name, cache_id)
+        cached_object = self.get_cached_object(cache_id)
 
-        anim_data = self.cached_object.obj_anim_data.get_anim_data(animation_index)
-        color_data = self.cached_object.color_data
+        anim_data = cached_object.obj_anim_data.get_anim_data(animation_index)
+        color_data = cached_object.color_data
 
         keyframe_list = [0]
         for i in range(anim_data.total_frames - 1):
-            frame_data = self.cached_object.obj_anim_data.get_frame_data(anim_data.first_frame + i)
+            frame_data = cached_object.obj_anim_data.get_frame_data(anim_data.first_frame + i)
             keyframe_list.append(frame_data.anim_timer)
         
         has_color_data = animation_index in color_data.animations
@@ -190,18 +206,19 @@ class ObjFile:
             "color_data":     color_data.animations,
         }
     
-    def get_frame_properties(self, object_name, animation_index = None, frame_index = None):
-        self.cache_object(object_name)
+    def get_frame_properties(self, object_name, animation_index = None, frame_index = None, cache_id = None):
+        self.cache_object(object_name, cache_id)
+        cached_object = self.get_cached_object(cache_id)
 
-        anim_data = self.cached_object.obj_anim_data.get_anim_data(animation_index)
+        anim_data = cached_object.obj_anim_data.get_anim_data(animation_index)
 
         if frame_index is None:
             try:
-                anim_data = self.cached_object.obj_anim_data.get_anim_data(animation_index)
+                anim_data = cached_object.obj_anim_data.get_anim_data(animation_index)
                 timer = self.animation_timer % anim_data.anim_length
 
                 for i in range(anim_data.total_frames):
-                    frame_data = self.cached_object.obj_anim_data.get_frame_data(anim_data.first_frame + i)
+                    frame_data = cached_object.obj_anim_data.get_frame_data(anim_data.first_frame + i)
                     if not timer >= frame_data.anim_timer:
                         frame_index = i
                         break
@@ -209,11 +226,11 @@ class ObjFile:
                 frame_index = 0
         
         if animation_index is None:
-            frame_data = self.cached_object.obj_anim_data.get_frame_data(frame_index)
+            frame_data = cached_object.obj_anim_data.get_frame_data(frame_index)
         else:
-            frame_data = self.cached_object.obj_anim_data.get_frame_data(anim_data.first_frame + frame_index)
+            frame_data = cached_object.obj_anim_data.get_frame_data(anim_data.first_frame + frame_index)
 
-        if frame_data.transform != 0: transform_matrix = self.cached_object.obj_anim_data.get_full_transform_data(frame_data.transform - 1).matrix
+        if frame_data.transform != 0: transform_matrix = cached_object.obj_anim_data.get_full_transform_data(frame_data.transform - 1).matrix
         else: transform_matrix = []
 
         if transform_matrix != []:
@@ -233,10 +250,11 @@ class ObjFile:
             "transform_inverted": invert_matrix,
         }
     
-    def get_sprite_part_properties(self, object_name, sprite_part_index):
-        self.cache_object(object_name)
+    def get_sprite_part_properties(self, object_name, sprite_part_index, cache_id = None):
+        self.cache_object(object_name, cache_id)
+        cached_object = self.get_cached_object(cache_id)
 
-        part_data = self.cached_object.obj_anim_data.get_part_data(sprite_part_index)
+        part_data = cached_object.obj_anim_data.get_part_data(sprite_part_index)
         
         part_size = (part_data.oam_data) & 0b11
         part_shape = (part_data.oam_data >> 2) & 0b11
@@ -254,7 +272,7 @@ class ObjFile:
             "renderer_index":  part_data.renderer,
         }
     
-    def get_sprite(self, object_name, animation_index, color_anim_index = None, frame_index = None, bypass_shader = False):
+    def get_sprite(self, object_name, animation_index, color_anim_index = None, frame_index = None, bypass_shader = False, cache_id = None):
         img, size, _ = self._get_sprite_data(
             object_name      = object_name,
             animation_index  = animation_index,
@@ -262,11 +280,12 @@ class ObjFile:
             frame_index      = frame_index,
             bypass_shader    = bypass_shader,
             separate         = False,
+            cache_id         = cache_id,
         )
 
         return img, size
     
-    def get_sprite_with_offset(self, object_name, animation_index, color_anim_index = None, frame_index = None, bypass_shader = False):
+    def get_sprite_with_offset(self, object_name, animation_index, color_anim_index = None, frame_index = None, bypass_shader = False, cache_id = None):
         img, size, offset = self._get_sprite_data(
             object_name      = object_name,
             animation_index  = animation_index,
@@ -274,11 +293,12 @@ class ObjFile:
             frame_index      = frame_index,
             bypass_shader    = bypass_shader,
             separate         = False,
+            cache_id         = cache_id,
         )
 
         return img, size, offset
     
-    def get_sprite_part_entities(self, object_name, animation_index, color_anim_index = None, frame_index = None, bypass_shader = False):
+    def get_sprite_part_entities(self, object_name, animation_index, color_anim_index = None, frame_index = None, bypass_shader = False, cache_id = None):
         data = self._get_sprite_data(
             object_name      = object_name,
             animation_index  = animation_index,
@@ -286,16 +306,18 @@ class ObjFile:
             frame_index      = frame_index,
             bypass_shader    = bypass_shader,
             separate         = True,
+            cache_id         = cache_id,
         )
 
         return data
     
-    def _get_sprite_data(self, object_name, animation_index, color_anim_index, frame_index, bypass_shader, separate):
-        self.cache_object(object_name)
+    def _get_sprite_data(self, object_name, animation_index, color_anim_index, frame_index, bypass_shader, separate, cache_id = None):
+        self.cache_object(object_name, cache_id)
+        cached_object = self.get_cached_object(cache_id)
         
-        obj_anim_data = self.cached_object.obj_anim_data
-        graph_file    = self.cached_object.graph_file
-        color_data    = self.cached_object.color_data
+        obj_anim_data = cached_object.obj_anim_data
+        graph_file    = cached_object.graph_file
+        color_data    = cached_object.color_data
 
         if frame_index is None:
             try:
@@ -329,11 +351,12 @@ class ObjFile:
             separate            = separate,
         )
     
-    def get_sprite_part_set_with_offset(self, object_name, first_part, total_parts, highlighted_part = None):
-        self.cache_object(object_name)
+    def get_sprite_part_set_with_offset(self, object_name, first_part, total_parts, highlighted_part = None, cache_id = None):
+        self.cache_object(object_name, cache_id)
+        cached_object = self.get_cached_object(cache_id)
         
-        obj_anim_data = self.cached_object.obj_anim_data
-        graph_file    = self.cached_object.graph_file
+        obj_anim_data = cached_object.obj_anim_data
+        graph_file    = cached_object.graph_file
         
         return get_sprite_part_set_graphic(
             obj_anim_data    = obj_anim_data,
@@ -343,12 +366,13 @@ class ObjFile:
             highlighted_part = highlighted_part,
         )
     
-    def get_sprite_part_graphic(self, object_name, sprite_part_index):
-        self.cache_object(object_name)
+    def get_sprite_part_graphic(self, object_name, sprite_part_index, cache_id = None):
+        self.cache_object(object_name, cache_id)
+        cached_object = self.get_cached_object(cache_id)
 
-        part_data = self.cached_object.obj_anim_data.get_part_data(sprite_part_index)
-        graph_file    = self.cached_object.graph_file
-        obj_anim_data = self.cached_object.obj_anim_data
+        part_data     = cached_object.obj_anim_data.get_part_data(sprite_part_index)
+        graph_file    = cached_object.graph_file
+        obj_anim_data = cached_object.obj_anim_data
         
         return draw_part(
             part_data     = part_data,
