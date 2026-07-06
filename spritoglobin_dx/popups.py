@@ -381,6 +381,8 @@ class GifExportWindow(QtWidgets.QDialog):
         self.update_preview()
     
     def update_preview(self):
+        cached_object = self.obj_data.get_cached_object()
+
         anim, _ = self.current_anim_list[self.anim_list_box.currentRow()]
 
         scale = self.scale_controller.value()
@@ -390,7 +392,7 @@ class GifExportWindow(QtWidgets.QDialog):
             color_animation = int(self.color_anim_list_box.currentText())
         
         img_data = self.obj_data.get_sprite_part_entities(
-            object_name      = self.obj_data.cached_object.name, 
+            object_name      = cached_object.name, 
             animation_index  = anim,
             color_anim_index = color_animation,
         )
@@ -403,7 +405,7 @@ class GifExportWindow(QtWidgets.QDialog):
         ]
 
         palette = self.obj_data.get_object_palette(
-            object_name      = self.obj_data.cached_object.name, 
+            object_name      = cached_object.name, 
             animation_index  = anim,
             color_anim_index = color_animation,
         )
@@ -413,7 +415,7 @@ class GifExportWindow(QtWidgets.QDialog):
         self.gif_preview.draw_3d_image([[base_sprite], palette, fragment_light])
 
         animation_properties = self.obj_data.get_animation_properties(
-            object_name     = self.obj_data.cached_object.name,
+            object_name     = cached_object.name,
             animation_index = anim,
         )
         
@@ -469,7 +471,8 @@ class GifExportWindow(QtWidgets.QDialog):
         self.anim_choose_list_box.blockSignals(True)
         self.anim_choose_list_box.clear()
 
-        object_properties = self.obj_data.get_object_properties(object_name = self.obj_data.cached_object.name)
+        cached_object = self.obj_data.get_cached_object()
+        object_properties = self.obj_data.get_object_properties(object_name = cached_object.name)
 
         for i in range(object_properties["animation_number"]):
             self.anim_choose_list_box.addItem(str(i))
@@ -480,7 +483,7 @@ class GifExportWindow(QtWidgets.QDialog):
         self.color_anim_list_box.blockSignals(True)
         self.color_anim_list_box.clear()
 
-        object_properties = self.obj_data.get_object_properties(object_name = self.obj_data.cached_object.name)
+        object_properties = self.obj_data.get_object_properties(object_name = cached_object.name)
 
         self.color_anim_list_box.setEnabled(object_properties["has_color_data"])
 
@@ -545,8 +548,9 @@ class GifExportWindow(QtWidgets.QDialog):
         config = configparser.ConfigParser()
         config.read(str(CONFIG_DIR / "config.ini"))
 
+        cached_object = self.obj_data.get_cached_object()
         path = config.get("NavigationPaths", "img_export_path")
-        filename = f"{self.obj_data.game_id}_{self.obj_data.cached_object.name}_"
+        filename = f"{self.obj_data.game_id}_{cached_object.name}_"
         filename += ".".join(f"{anim}" for anim, _ in self.current_anim_list)
 
         path, file_filter = QtWidgets.QFileDialog.getSaveFileName(
@@ -559,6 +563,8 @@ class GifExportWindow(QtWidgets.QDialog):
         if path == '':
             return
         
+        filename = os.path.basename(path)
+        
         config["NavigationPaths"]["img_export_path"] = os.path.dirname(path)
         with open(CONFIG_DIR / "config.ini", "w") as config_file:
             config.write(config_file)
@@ -570,7 +576,7 @@ class GifExportWindow(QtWidgets.QDialog):
         # begin compiling the animation
         self.reset_timer()
         self.animation_timer.stop()
-        object_properties = self.obj_data.get_object_properties(object_name = self.obj_data.cached_object.name)
+        object_properties = self.obj_data.get_object_properties(object_name = cached_object.name)
 
         color_animation = -1
         if self.color_anim_list_box.currentIndex() != 0:
@@ -596,7 +602,7 @@ class GifExportWindow(QtWidgets.QDialog):
             anim_list.append([key, sum(count for _, count in group)])
 
         for anim, count in anim_list:
-            object_name = self.obj_data.cached_object.name
+            object_name = cached_object.name
 
             self.obj_data.set_timers(0, animation_timer = True)
 
@@ -792,7 +798,22 @@ class ProgramThemeEditor(QtWidgets.QWidget):
             icon_size = (52, 52)
             scale_factor = 1
 
-            button.setIcon(self.parent.grab_theme_icon('img_presets_temp', i + 1, icon_size).transformed(QtGui.QTransform().scale(scale_factor, scale_factor)))
+            mapped_colors = {
+                "M_COLOR_0": THEME_PRESETS[preset][0],
+                "L_COLOR_0": THEME_PRESETS[preset][1],
+                "K_COLOR_0": THEME_PRESETS[preset][2],
+                "P_COLOR_0": THEME_PRESETS[preset][3],
+                "WHITE": THEME_COLORS["WHITE"],
+                "BLACK": THEME_COLORS["BLACK"],
+            }
+
+            button.setIcon(self.parent.grab_theme_icon(
+                'img_presets_temp',
+                i + 1,
+                icon_size,
+                map_theme_colors = True,
+                mapped_colors = mapped_colors,
+            ).transformed(QtGui.QTransform().scale(scale_factor, scale_factor)))
             button.setIconSize(QtCore.QSize(icon_size[0] * scale_factor, icon_size[1] * scale_factor))
 
             button.clicked.connect(partial(self.set_preset_colors, preset))

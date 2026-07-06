@@ -121,7 +121,7 @@ class ObjFile:
             
             self.cached_objects[cache_id] = cached_object
     
-    def get_cached_object(self, cache_id):
+    def get_cached_object(self, cache_id = None):
         if cache_id is None:
             cache_id = "_main_"
 

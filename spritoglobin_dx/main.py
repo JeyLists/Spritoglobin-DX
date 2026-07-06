@@ -300,14 +300,21 @@ class MainWindow(QtWidgets.QMainWindow):
 
         #: The "&" symbol will underline a letter and cause the option to be selectable by pressing the letter on your keyboard while holding Alt. Please ensure all letters that are given this property within each submenu and in the toolbar itself are unique, so all options can be selected this way.
         language_selector = QtWidgets.QMenu(self.tr("&Language"), self)
-        for i, lang_key in enumerate(LANGUAGES):
+        sorted_lang = {}
+        for lang_key in LANGUAGES:
+            sorted_lang[LANGUAGES[lang_key]["name"]] = lang_key
+        lang_sort = list(sorted_lang.keys())
+        lang_sort.sort(key = lambda x: (x is not None, x))
+
+        for i, lang_sort in enumerate(lang_sort):
+            lang_key = sorted_lang[lang_sort]
             if not (LANG_DIR / f'{lang_key}.qm').exists() and not lang_key == "None" and not lang_key == DEFAULT_LANGUAGE: continue
             lang = LANGUAGES[lang_key]
 
-            lang_string = lang[0]
+            lang_string = lang['name']
             if lang_string is None:
                 lang_string = self.tr("<System Language>")
-            elif lang[5]:
+            elif lang['unfinished']:
                 lang_string += "⚠"
 
             if self.settings["language"] == lang_key:
@@ -875,7 +882,9 @@ class MainWindow(QtWidgets.QMainWindow):
             if lang_key == "None":
                 lang_key = QtCore.QLocale.system().name()
             
-            github_lang_key = LANGUAGES[lang_key][3]
+            github_lang_key = LANGUAGES[lang_key]['github_lang']
+            if github_lang_key is None:
+                github_lang_key = "en"
 
             check_updates_box = QtWidgets.QMessageBox(self)
             check_updates_box.setTextFormat(QtCore.Qt.RichText)

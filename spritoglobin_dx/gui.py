@@ -34,7 +34,7 @@ class InteractiveGraphicsWindow(QtWidgets.QLabel):
             self.info_text = QtWidgets.QLabel()
             self.info_text.setFont(font)
             palette = self.info_text.palette()
-            palette.setColor(QtGui.QPalette.ColorRole.WindowText, QtGui.QColor(THEME_COLORS["BLACK"]))
+            palette.setColor(QtGui.QPalette.ColorRole.WindowText, QtGui.QColor(THEME_COLORS["DARK"]))
             self.info_text.setPalette(palette)
             layout.addWidget(self.info_text, 0, 1, 1, -1)
 
@@ -350,7 +350,7 @@ class AnimationTimeline(QtWidgets.QWidget):
         self.info_text = QtWidgets.QLabel()
         self.info_text.setFont(font)
         palette = self.info_text.palette()
-        palette.setColor(QtGui.QPalette.ColorRole.WindowText, QtGui.QColor(THEME_COLORS["BLACK"]))
+        palette.setColor(QtGui.QPalette.ColorRole.WindowText, QtGui.QColor(THEME_COLORS["DARK"]))
         self.info_text.setPalette(palette)
         timeline_layout.addWidget(self.info_text, 0, 1)
 
