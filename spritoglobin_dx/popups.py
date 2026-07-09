@@ -803,12 +803,12 @@ class ProgramThemeEditor(QtWidgets.QWidget):
                 "L_COLOR_0": THEME_PRESETS[preset][1],
                 "K_COLOR_0": THEME_PRESETS[preset][2],
                 "P_COLOR_0": THEME_PRESETS[preset][3],
-                "WHITE": THEME_COLORS["WHITE"],
-                "BLACK": THEME_COLORS["BLACK"],
+                "WHITE": THEME_PRESETS[preset][4],
+                "BLACK": THEME_PRESETS[preset][5],
             }
 
             button.setIcon(self.parent.grab_theme_icon(
-                'img_presets_temp',
+                'img_presets',
                 i + 1,
                 icon_size,
                 map_theme_colors = True,
@@ -954,7 +954,7 @@ class ProgramThemeEditor(QtWidgets.QWidget):
             self.set_colors()
 
     def set_preset_colors(self, preset):
-        self.theme_colors = list(THEME_PRESETS[preset])
+        self.theme_colors = list(THEME_PRESETS[preset][:4])
         self.map_colors_toggle.setChecked(True)
         self.set_colors()
 
@@ -1047,7 +1047,7 @@ class ProgramThemeEditor(QtWidgets.QWidget):
         qp.setPen(pen)
         qp.drawRect(thickness // 2, thickness // 2, (size * 2) + ((thickness * 4) - thickness), size + ((thickness * 4) - thickness))
 
-        pen.setColor(QtGui.QColor(THEME_COLORS["WHITE"]))
+        pen.setColor(QtGui.QColor(THEME_COLORS["LIGHT"]))
         qp.setPen(pen)
         qp.drawRect(thickness + (thickness // 2), thickness + (thickness // 2), (size * 2) + ((thickness * 4) - (thickness * 3)), size + ((thickness * 4) - (thickness * 3)))
 

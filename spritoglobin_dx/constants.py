@@ -17,26 +17,26 @@ LANG_DIR = SCRIPT_DIR / 'lang'
 CONFIG_DIR = Path(QtCore.QStandardPaths.writableLocation(QtCore.QStandardPaths.StandardLocation.AppConfigLocation))
 
 
-THEME_PRESETS = {
-    'mlkp': ["#f81810", "#18f868", "#f79c14", "#ffffff"], # mario, luigi, koopa, pmario
-    'gmgd': ["#aee714", "#ff3c75", "#cf2cff", "#555596"], # geraco, mboss, gedonko, dstar
-    'glob': ["#f05ec7", "#edd20a", "#9f5cda", "#14bb59"], # the globins
-    'choc': ["#883800", "#ffe898", "#ff7020", "#404050"], # chococat
-    'f_ww': ["#d462a6", "#ff9b56", "#a40062", "#d62800"], # lesbean flag
-    'f_mm': ["#26ceaa", "#5049cc", "#98e8c1", "#7bade2"], # toothpaste flag
-    'f_nb': ["#fff433", "#9b59d0", "#2d2d2d", "#ffffff"], # en-bee flag
-    'f_py': ["#009fe3", "#e50051", "#340c46", "#fcbf00"], # poly want a cracker flag
+THEME_PRESETS = { # fifth and sixth colors are white/black for preset icons
+    'mlkp': ["#f81810", "#18f868", "#f79c14", "#ffffff", '#ffffff', "#002020"], # mario, luigi, koopa, pmario
+    'gmgd': ["#aee714", "#ff3c75", "#cf2cff", "#555596", '#ffdfdf', "#200000"], # geraco, mboss, gedonko, dstar
+    'glob': ["#f05ec7", "#edd20a", "#9f5cda", "#14bb59", '#ffffff', "#000000"], # the globins
+    'choc': ["#883800", "#ffe898", "#ff7020", "#404050", '#ffefdf', "#100000"], # chococat
+    'f_ww': ["#d462a6", "#ff9b56", "#a40062", "#d62800", '#ffffff', "#201000"], # lesbean flag
+    'f_mm': ["#26ceaa", "#5049cc", "#98e8c1", "#7bade2", '#ffffff', "#002030"], # toothpaste flag
+    'f_nb': ["#fff433", "#9b59d0", "#2d2d2d", "#ffffff", '#ffffff', "#181800"], # en-bee flag
+    'f_py': ["#009fe3", "#e50051", "#340c46", "#fcbf00", '#ffffff', "#001030"], # poly want a cracker flag
 }
 
 THEME_COLORS = {
-    "WHITE": "#ffffffff",
-    "BLACK": "#ff000000",
-
+    "LIGHT":  "#ffffffff",
     "GRAY_L": "#88888888",
     "GRAY_M": "#aa777777",
     "GRAY_H": "#ee666666",
+    "DARK":   "#ff555555",
 
-    "DARK": "#ff555555",
+    "WHITE": "#FFFFFF",
+    "BLACK": "#000000",
 }
 
 THEME_COLOR_ICON_MASKS = { # normal, light, dark

@@ -269,7 +269,7 @@ class InteractiveGraphicsWindow(QtWidgets.QLabel):
             pen.setWidth(thickness)
             pen.setJoinStyle(QtCore.Qt.MiterJoin)
 
-            pen.setColor(QtGui.QColor(THEME_COLORS["WHITE"]))
+            pen.setColor(QtGui.QColor(THEME_COLORS["LIGHT"]))
             qp.setPen(pen)
             qp.drawRect(x_pos - (thickness / 2), y_pos - (thickness / 2), x_size + thickness, y_size + thickness)
 
@@ -636,7 +636,7 @@ class GraphicsAnimationTimeline(AnimationTimeline):
             playhead_is_over = (current_time >= keyframe) and (current_time < keyframe_ends[i + 1])
             if playhead_is_over:
                 qp.setPen(QtGui.QPen(QtGui.QColor(THEME_COLORS["K_COLOR_0"]), 1))
-                w_color = QtGui.QColor(THEME_COLORS["WHITE"])
+                w_color = QtGui.QColor(THEME_COLORS["LIGHT"])
                 w_color.setAlpha(127)
                 qp.setBrush(QtGui.QBrush(w_color))
 
@@ -730,7 +730,7 @@ class GraphicsAnimationTimeline(AnimationTimeline):
         qp.setPen(pen)
         qp.drawRect(1, 1, 70, 70)
 
-        pen.setColor(QtGui.QColor(THEME_COLORS["WHITE"]))
+        pen.setColor(QtGui.QColor(THEME_COLORS["LIGHT"]))
         qp.setPen(pen)
         qp.drawRect(3, 3, 66, 66)
 
@@ -883,7 +883,7 @@ class ColorAnimationTimeline(AnimationTimeline):
                 playhead_is_over = (current_time >= keyframe) and (current_time < next_keyframe)
                 if playhead_is_over:
                     qp.setPen(QtGui.QPen(QtGui.QColor(THEME_COLORS["K_COLOR_0"]), 1))
-                    w_color = QtGui.QColor(THEME_COLORS["WHITE"])
+                    w_color = QtGui.QColor(THEME_COLORS["LIGHT"])
                     w_color.setAlpha(127)
                     qp.setBrush(QtGui.QBrush(w_color))
 
@@ -1010,7 +1010,7 @@ class ColorAnimationTimeline(AnimationTimeline):
             qp.setPen(pen)
             qp.drawRect(1, 1, 38, 38)
 
-            pen.setColor(QtGui.QColor(THEME_COLORS["WHITE"]))
+            pen.setColor(QtGui.QColor(THEME_COLORS["LIGHT"]))
             qp.setPen(pen)
             qp.drawRect(3, 3, 34, 34)
 

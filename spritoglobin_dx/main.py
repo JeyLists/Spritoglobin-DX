@@ -1511,7 +1511,7 @@ class MainWindow(QtWidgets.QMainWindow):
         qp.setPen(pen)
         qp.drawRect(thickness // 2, thickness // 2, (size * 2) + ((thickness * 4) - thickness), size + ((thickness * 4) - thickness))
 
-        pen.setColor(QtGui.QColor(THEME_COLORS["WHITE"]))
+        pen.setColor(QtGui.QColor(THEME_COLORS["LIGHT"]))
         qp.setPen(pen)
         qp.drawRect(thickness + (thickness // 2), thickness + (thickness // 2), (size * 2) + ((thickness * 4) - (thickness * 3)), size + ((thickness * 4) - (thickness * 3)))
 
@@ -1741,7 +1741,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.update_renderer_data()
     
     def globin_theme_toggle(self):
-        THEME_COLORS["M_COLOR_0"], THEME_COLORS["L_COLOR_0"], THEME_COLORS["K_COLOR_0"], THEME_COLORS["P_COLOR_0"] = THEME_PRESETS['glob']
+        THEME_COLORS["M_COLOR_0"], THEME_COLORS["L_COLOR_0"], THEME_COLORS["K_COLOR_0"], THEME_COLORS["P_COLOR_0"] = THEME_PRESETS['glob'][:4]
         self.theme_icons_map_theme_colors = True
         self.update_program_theme(save_theme = True)
 
