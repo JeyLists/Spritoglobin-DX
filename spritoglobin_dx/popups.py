@@ -148,10 +148,7 @@ class FileImportWindow(QtWidgets.QDialog):
             is_nds = obj_data.game_id in GAME_IDS_THAT_ARE_ON_NDS
             if is_nds:
                 #: Describes an NDS sprite container. "BObj" and "FObj" are internal names, do not translate them.
-                info = self.tr("NDS {0} Container ({1} Entries)").format(
-                    "BObj" if obj_data.nds_is_bobj else "FObj",
-                    obj_data.valid_entries,
-                )
+                info = self.tr("NDS {0} Container").format("BObj" if obj_data.nds_is_bobj else "FObj")
                 valid = (obj_data.valid_entries, obj_data.invalid_entries)
                 ca_valid = (len(obj_data.cellanim_files), len(obj_data.nds_palettes))
             else:
