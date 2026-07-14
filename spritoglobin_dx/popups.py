@@ -109,6 +109,7 @@ class FileImportWindow(QtWidgets.QDialog):
         valid = ("?", "?")
         ca_info = "???"
         ca_valid = ("?", "?")
+        is_nds = False
         QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
         try:
             with open(path, 'rb') as obj_in:
@@ -144,10 +145,20 @@ class FileImportWindow(QtWidgets.QDialog):
             self.import_button.setEnabled(True)
             self.sort_contents_toggle.setVisible(True)
 
-            info = self.tr("BG4 Archive (Version {0}.{1})").format(*obj_data.bg4_version)
-            valid = (obj_data.valid_entries, obj_data.invalid_entries)
-            ca_info = self.tr("BG4 Archive (Version {0}.{1})").format(*obj_data.bg4_ca_version)
-            ca_valid = (obj_data.valid_ca_entries, obj_data.invalid_ca_entries)
+            is_nds = obj_data.game_id in GAME_IDS_THAT_ARE_ON_NDS
+            if is_nds:
+                #: Describes an NDS sprite container. "BObj" and "FObj" are internal names, do not translate them.
+                info = self.tr("NDS {0} Container ({1} Entries)").format(
+                    "BObj" if obj_data.nds_is_bobj else "FObj",
+                    obj_data.valid_entries,
+                )
+                valid = (obj_data.valid_entries, obj_data.invalid_entries)
+                ca_valid = (len(obj_data.cellanim_files), len(obj_data.nds_palettes))
+            else:
+                info = self.tr("BG4 Archive (Version {0}.{1})").format(*obj_data.bg4_version)
+                valid = (obj_data.valid_entries, obj_data.invalid_entries)
+                ca_info = self.tr("BG4 Archive (Version {0}.{1})").format(*obj_data.bg4_ca_version)
+                ca_valid = (obj_data.valid_ca_entries, obj_data.invalid_ca_entries)
 
             game_title = self.game_title_strings[f"GameTitle{self.current_game_id}"]
         finally:
@@ -165,9 +176,13 @@ class FileImportWindow(QtWidgets.QDialog):
             string += f"({game_title})"
             string += "\n"
             string += "\n"
-            string += f"{cellanime_title_string} - {ca_info}"
-            string += "\n"
-            string += self.tr("{0} Valid Entries, {1} Invalid Entries").format(*ca_valid)
+            if is_nds:
+                #: Displays the amount of sprite and palette records inside a Partners in Time sprite container.
+                string += self.tr("{0} Sprites, {1} Palettes").format(*ca_valid)
+            else:
+                string += f"{cellanime_title_string} - {ca_info}"
+                string += "\n"
+                string += self.tr("{0} Valid Entries, {1} Invalid Entries").format(*ca_valid)
             string += "\n"
 
             self.file_info_text.setText(string)

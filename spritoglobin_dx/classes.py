@@ -5,7 +5,7 @@ from io import BytesIO
 import numpy
 
 from spritoglobin_dx.constants import *
-from spritoglobin_dx.graphics import SIZING_TABLE, get_sprite_graphic, get_sprite_part_set_graphic, draw_part
+from spritoglobin_dx.graphics import SIZING_TABLE, SWIZZLE_TABLE, get_sprite_graphic, get_sprite_part_set_graphic, draw_part
 
 
 class InvalidObjectFileError(Exception):
@@ -31,6 +31,7 @@ class ObjFile:
         self.data_files = {"": self.DataFile("", None)}
         self.cached_objects = {}
 
+        # each known container format is simply attempted in turn
         try:
             bg4_extract, self.bg4_version, self.valid_entries, self.invalid_entries = self.bg4_extract(input_data)
 
@@ -64,13 +65,57 @@ class ObjFile:
                             break
                     if tests_completed: game_id = game_key
 
-            self.game_id = game_id
+        except ValueError:
+            # not a BG4 archive; try the NDS games' ".dat" sprite containers
+            # (support for further container formats would go here as the next
+            # attempts)
+            try:
+                nds_extract, self.valid_entries, self.invalid_entries = self.nds_dat_extract(input_data)
 
-        except ValueError as e:
-            # no BG4 magic number, report error 102 ("Bad Archive")
-            # implementing pre-PJ games may deprecate this specific context for this error
-            raise InvalidObjectFileError(102)
-        
+                for name in nds_extract:
+                    data = nds_extract[name]
+
+                    if name != "0000":
+                        self.data_files[name] = self.DataFile(name, data)
+                        continue
+
+                    # entry 0 holds the sprite and palette records, filling the
+                    # role that _CA_INFO_ fills in the BG4 archives
+                    self.nds_is_bobj, sprites, self.nds_palettes = self.nds_header_extract(data, len(nds_extract))
+                    for i, (entry_index, palette) in enumerate(sprites):
+                        name = f"Sprite 0x{i:03X}"
+                        self.cellanim_files[name] = self.NdsSpriteHandle(name, entry_index, palette)
+
+                if game_id is None:
+                    for game_key in GAME_IDS_THAT_ARE_ON_NDS:
+                        tests_completed = True
+                        for file in self.cellanim_files:
+                            # if the sprite has no animation data, move on
+                            if self.cellanim_files[file].anim_file == "":
+                                continue
+
+                            test = self.data_files[self.cellanim_files[file].anim_file].rlz_decompress_data()
+
+                            if len(test) < 0x18:
+                                tests_completed = False
+                                break
+
+                            transform_count, = struct.unpack_from('<H', test, 0x2)
+                            sequence_count, frame_count, clip_count, layer_count = struct.unpack_from('<4H', test, 0xC)
+
+                            test_value = 0x18 + (sequence_count * 8) + (frame_count * 4) + (clip_count * 4) + (layer_count * 12) + (transform_count * 12)
+                            test_conditional = sequence_count != 0 and frame_count != 0 and clip_count != 0 and test_value <= len(test)
+                            if not test_conditional:
+                                tests_completed = False
+                                break
+                        if tests_completed: game_id = game_key
+
+            except ValueError:
+                # nothing recognized the file, report error 102 ("Bad Archive")
+                raise InvalidObjectFileError(102)
+
+        self.game_id = game_id
+
         if self.cellanim_files == {}:
             # no _CA_INFO_, report error 101 ("No _CA_INFO_")
             raise InvalidObjectFileError(101)
@@ -93,6 +138,23 @@ class ObjFile:
 
         if cached_object.name != object_name:
             current_obj_data = self.cellanim_files[object_name]
+
+            if self.game_id in GAME_IDS_THAT_ARE_ON_NDS:
+                # everything NDS-shaped about the data ends right here
+                anim_data, graph_file = self.nds_convert_object(
+                    self.data_files[current_obj_data.anim_file].rlz_decompress_data(),
+                    self.data_files[current_obj_data.graph_file].rlz_decompress_data(),
+                    self.nds_palette_rgba(current_obj_data.palette),
+                    self.nds_is_bobj,
+                )
+
+                cached_object.name = object_name
+                cached_object.obj_anim_data = self.AnimData(anim_data, self.game_id)
+                cached_object.graph_file = graph_file
+                cached_object.color_data = self.ColorData(self.data_files[current_obj_data.color_file].blz77_decompress_data())
+
+                self.cached_objects[cache_id] = cached_object
+                return
 
             # for testing DT
             use_force = False
@@ -322,7 +384,7 @@ class ObjFile:
         if frame_index is None:
             try:
                 anim_data = obj_anim_data.get_anim_data(animation_index)
-                
+
                 timer = self.animation_timer % anim_data.anim_length
 
                 for i in range(anim_data.total_frames):
@@ -330,14 +392,14 @@ class ObjFile:
                     if not timer >= frame_data.anim_timer:
                         frame_index = i
                         break
-                
+
                 animation_timer = self.animation_timer
                 color_timer = self.color_timer
             except AttributeError:
                 frame_index = 0
                 animation_timer = 0
                 color_timer = 0
-        
+
         return get_sprite_graphic(
             obj_anim_data       = obj_anim_data, 
             graph_file          = graph_file, 
@@ -468,7 +530,364 @@ class ObjFile:
             files[name] = raw
 
         return files, ((version >> 8) & 0xFF, version & 0xFF), valid_count, invalid_count
-    
+
+    def nds_dat_extract(self, input_data):
+        files = {}
+        padding_words = 0
+        data = BytesIO(input_data)
+
+        # --- Offset table ---
+        # the first offset is also the table's byte length, and unused
+        # trailing words are 0xFFFFFFFF
+        first_offset = int.from_bytes(data.read(4), 'little')
+        if first_offset < 8 or first_offset % 4 != 0 or first_offset > len(input_data):
+            raise ValueError("invalid .dat offset table")
+
+        offsets = [first_offset]
+        for i in range(1, first_offset // 4):
+            word = int.from_bytes(data.read(4), 'little')
+            if word == 0xFFFFFFFF:
+                padding_words = (first_offset // 4) - i
+                break
+            if word < offsets[-1] or word > len(input_data):
+                raise ValueError("invalid .dat offset table")
+            offsets.append(word)
+
+        if len(offsets) < 3 or offsets[-1] != len(input_data):
+            raise ValueError("invalid .dat offset table")
+
+        # --- Extract entries ---
+        for i in range(len(offsets) - 1):
+            data.seek(offsets[i])
+            files[f"{i:04X}"] = data.read(offsets[i + 1] - offsets[i])
+
+        return files, len(files), padding_words
+
+    def nds_header_extract(self, header, entry_count):
+        data = BytesIO(header)
+
+        # --- Header ---
+        # entry 0 of a sprite container holds the sprite and palette records
+        sprite_count = int.from_bytes(data.read(4), 'little')
+        palette_count = int.from_bytes(data.read(4), 'little')
+        if not 0 < sprite_count < 0x10000 or not 0 < palette_count < 0x10000:
+            raise ValueError("no sprite header")
+
+        # battle sprite records are 0x14 bytes with 0xFFFF at offset 4;
+        # field sprite records are 8 bytes
+        for record_size in (0x14, 0x8):
+            if 8 + (sprite_count * record_size) + (palette_count * 8) > len(header):
+                continue
+
+            # --- Sprite records ---
+            data.seek(8)
+            sprites = []
+            for _ in range(sprite_count):
+                entry_index, palette, unknown_04 = struct.unpack_from('<3H', data.read(record_size))
+                if (record_size == 0x14 and unknown_04 != 0xFFFF) or entry_index + 1 >= entry_count or palette >= palette_count:
+                    break
+                sprites.append((entry_index, palette))
+            if len(sprites) != sprite_count:
+                continue
+
+            # --- Palette records ---
+            palettes = []
+            for _ in range(palette_count):
+                entry_index, auxiliary_index, bank_count, auxiliary_count = struct.unpack_from('<2H2B', data.read(8))
+                if entry_index >= entry_count or bank_count == 0:
+                    break
+                palettes.append((entry_index, bank_count))
+            if len(palettes) != palette_count:
+                continue
+
+            return record_size == 0x14, sprites, palettes
+
+        raise ValueError("invalid sprite or palette records")
+
+    def nds_palette_rgba(self, palette_index):
+        # PiT palettes are uncompressed 16-color RGB555 banks; expand them
+        # into one 256-color RGBA table
+        entry_index, bank_count = self.nds_palettes[palette_index]
+        data = BytesIO(self.data_files[f"{entry_index:04X}"].data[:bank_count * 0x20])
+
+        palette = numpy.zeros((256, 4), dtype = numpy.uint8)
+        for i in range(256):
+            color = data.read(2)
+            if len(color) < 2:
+                break
+            value = int.from_bytes(color, 'little')
+            r, g, b = value & 0x1F, (value >> 5) & 0x1F, (value >> 10) & 0x1F
+            palette[i] = ((r << 3) | (r >> 2), (g << 3) | (g >> 2), (b << 3) | (b >> 2), 255)
+
+        return palette
+
+    def nds_convert_object(self, anim_data, graph_file, palette, is_bobj):
+        # Parse one sprite's NDS animation and pixel data into the AnimData
+        # layout and the swizzled RGBA8888 tile buffer the rest of the program
+        # already understands, so that nothing past this point needs any NDS
+        # handling.
+        #
+        # A PiT *sequence* plays a run of *frames*; every frame shows one
+        # *clip* for some duration; a clip is a run of *layers*, which are
+        # OAM-like graphics with optional per-layer affine transforms.
+        # Sequences map straight onto animation records, frames onto frame
+        # records (with their clip's layer run and their end time filled in),
+        # and layers onto sprite part records.
+        try:
+            flags, transform_count = struct.unpack_from('<2H', anim_data, 0)
+            sequence_count, frame_count, clip_count, layer_count = struct.unpack_from('<4H', anim_data, 0xC)
+            sequences_offset = 0x18
+            frames_offset = sequences_offset + (sequence_count * 8)
+            clips_offset = frames_offset + (frame_count * 4)
+            layers_offset = clips_offset + (clip_count * 4)
+            transforms_offset = layers_offset + (layer_count * 12)
+            if not sequence_count or not frame_count or not clip_count or transforms_offset + (transform_count * 12) > len(anim_data):
+                raise ValueError("animation arrays don't fit the decompressed entry")
+
+            sequences = [struct.unpack_from('<2H', anim_data, sequences_offset + (i * 8)) for i in range(sequence_count)]
+            # the timing routines mask each frame's duration to its low 9 bits
+            frames = [(clip, duration & 0x1FF) for clip, duration in
+                      (struct.unpack_from('<2H', anim_data, frames_offset + (i * 4)) for i in range(frame_count))]
+            clips = [struct.unpack_from('<2H', anim_data, clips_offset + (i * 4)) for i in range(clip_count)]
+            layers = [struct.unpack_from('<6H', anim_data, layers_offset + (i * 12)) for i in range(layer_count)]
+            transforms = [(angle, scale_x / 0x100, scale_y / 0x100) for angle, scale_x, scale_y in
+                          (struct.unpack_from('<H2h', anim_data, transforms_offset + (i * 12)) for i in range(transform_count))]
+        except Exception:
+            # keep the UI alive on the couple of records that don't point at
+            # real animation data (e.g. USA FObj.dat sprite 0x1AB) by swapping
+            # in one empty single-frame animation
+            flags = 0
+            sequences, frames, clips, layers, transforms = [(0, 1)], [(0, 1)], [(0, 0)], [], []
+
+        # each frame's keyframe timer is its end time in 60fps ticks,
+        # cumulative from the start of its sequence
+        frame_timers = [duration for clip, duration in frames]
+        anim_lengths = []
+        for first_frame, end_frame in sequences:
+            total = 0
+            for frame in range(first_frame, min(end_frame, len(frames))):
+                total += frames[frame][1]
+                frame_timers[frame] = min(total, 0xFFFF)
+            anim_lengths.append(min(max(total, 1), 0xFFFF))
+
+        # layers map onto sprite part records, and their paletted 4bpp/8bpp
+        # graphics (OBJ tile chains in FObj files, or textures in BObj files,
+        # where the layer word at 0x04 is an identity key and repeated keys
+        # reuse the pixels of the first layer that used the key) get decoded
+        # on first use into one shared RGBA8888 tile buffer. A layer's affine
+        # transform and flips are static, so they get baked into its texture,
+        # padded to the smallest fitting OAM size, or split into a grid of
+        # 64x64 parts when not even that fits; its part record then needs
+        # nothing beyond the ordinary fields.
+        bobj_is256 = bool(flags & 0x4000)
+        bobj_linear = bool(flags & 0x2000)
+
+        colors = palette.astype(numpy.uint32)
+        colors = (colors[:, 0] << 24) | (colors[:, 1] << 16) | (colors[:, 2] << 8) | colors[:, 3]
+
+        part_fields = []
+        part_starts = [0] # a layer scaled beyond 64x64 spans several parts
+        textures = [numpy.zeros(64, dtype = numpy.uint32)] # a transparent 8x8 tile for malformed layers
+        destinations = {}
+        source_offsets = {}
+        next_source = 0
+        next_destination = 2
+        for attr0, attr1, attr2, unknown_06, transform_word, unknown_0a in layers:
+            shape = attr0 >> 14
+            width, height = SIZING_TABLE[shape][attr1 >> 14] if shape < 3 else (0, 0)
+
+            if is_bobj:
+                is256, linear = bobj_is256, bobj_linear
+                palette_bank = 0 if is256 else (transform_word >> 12) & 7
+                if attr2 not in source_offsets:
+                    source_offsets[attr2] = next_source
+                    next_source += (width * height) if is256 else (width * height) // 2
+                source = source_offsets[attr2]
+            else:
+                is256 = bool(attr0 & 0x2000)
+                linear = False
+                palette_bank = 0
+                source = (attr2 & 0x3FF) * (0x40 if is256 else 0x20)
+
+            if shape == 3: # prohibited OAM shape; point at the transparent tile
+                part_fields.append((0, 0, 0, 0))
+                part_starts.append(len(part_fields))
+                continue
+
+            # signed 8/9-bit offsets of the layer's top-left corner, relative
+            # to the sprite's anchor; the part records use center-based
+            # offsets with +Y up
+            center_x = (((attr1 & 0x1FF) ^ 0x100) - 0x100) + (width // 2)
+            center_y = (((attr0 & 0xFF) ^ 0x80) - 0x80) + (height // 2)
+
+            transform = None
+            if attr0 & 0x100 and (transform_word & 0x3FF) < len(transforms):
+                transform = transforms[transform_word & 0x3FF]
+
+            oam_data = (attr1 >> 14) | (shape << 2)
+            if transform is None:
+                baked_flips = (False, False)
+                out_width, out_height = width, height
+                if attr1 & 0x1000: oam_data |= 0x100
+                if attr1 & 0x2000: oam_data |= 0x200
+            else:
+                # flips get baked along with the transform, and in double-size
+                # mode the transform center is at (x + width, y + height)
+                # instead of the layer's center
+                baked_flips = (bool(attr1 & 0x1000), bool(attr1 & 0x2000))
+                out_shape, out_size, out_width, out_height = self.nds_transformed_size(width, height, transform)
+                if out_shape is not None:
+                    oam_data = out_size | (out_shape << 2)
+                if attr0 & 0x200:
+                    center_x += width // 2
+                    center_y += height // 2
+
+            texture = (source, width, height, is256, linear, palette_bank, transform, baked_flips)
+            if texture not in destinations:
+                destinations[texture] = next_destination
+                next_destination += (out_width * out_height * 4) // 128
+
+                # decode the texture: expand the indices, detile, apply the
+                # palette and bake the flips and transform
+                byte_length = (width * height) if is256 else (width * height) // 2
+                raw = numpy.zeros(byte_length, dtype = numpy.uint8)
+                available = graph_file[source:source + byte_length]
+                raw[:len(available)] = numpy.frombuffer(available, dtype = numpy.uint8)
+
+                if is256:
+                    indices = raw
+                else:
+                    # two pixels per byte, low nibble first
+                    indices = numpy.empty(byte_length * 2, dtype = numpy.uint8)
+                    indices[0::2] = raw & 0x0F
+                    indices[1::2] = raw >> 4
+
+                if linear:
+                    indices = indices.reshape(height, width)
+                else:
+                    indices = indices.reshape(height // 8, width // 8, 8, 8).transpose(0, 2, 1, 3).reshape(height, width)
+
+                pixels = (colors if is256 else colors[palette_bank * 16:(palette_bank * 16) + 16])[indices]
+                pixels[indices == 0] = 0 # color 0 is transparent
+
+                if baked_flips[0]: pixels = pixels[:, ::-1]
+                if baked_flips[1]: pixels = pixels[::-1, :]
+                if transform is not None:
+                    pixels = self.nds_warp_texture(pixels, transform, out_width, out_height)
+
+                # store as up-to-64x64 cells of swizzled 8x8 tiles
+                cell_width, cell_height = min(out_width, 64), min(out_height, 64)
+                tiles = pixels.reshape(out_height // cell_height, cell_height // 8, 8, out_width // cell_width, cell_width // 8, 8)
+                tiles = tiles.transpose(0, 3, 1, 4, 2, 5).reshape(-1, 64)
+                swizzled = numpy.empty_like(tiles)
+                swizzled[:, SWIZZLE_TABLE] = numpy.ascontiguousarray(tiles)
+                textures.append(swizzled.reshape(-1))
+            destination = destinations[texture]
+
+            if out_width <= 64 and out_height <= 64:
+                part_fields.append((oam_data, destination, center_x, -center_y))
+            else:
+                # scaled up beyond the largest OAM size: the baked texture
+                # becomes a grid of 64x64 parts (oam_data 3)
+                for cell_y in range(out_height // 64):
+                    for cell_x in range(out_width // 64):
+                        cell_center_x = center_x + (cell_x * 64) + 32 - (out_width // 2)
+                        cell_center_y = center_y + (cell_y * 64) + 32 - (out_height // 2)
+                        cell_destination = destination + (((cell_y * (out_width // 64)) + cell_x) * 128)
+                        part_fields.append((3, cell_destination, cell_center_x, -cell_center_y))
+
+            part_starts.append(len(part_fields))
+
+        graph_file = numpy.concatenate(textures).tobytes()
+
+        # emit the parsed data as an AnimData blob: header, offsets and the 16
+        # renderer colors (filled with the palette) like the native layouts,
+        # then the animation, frame and part records
+        anims_offset = 0xE + 0x14 + 0x40
+        frame_offset = anims_offset + (len(sequences) * 8)
+        part_offset = frame_offset + (len(frames) * 8)
+        end_offset = part_offset + (len(part_fields) * 12)
+
+        records = bytearray()
+        records += struct.pack('<H2BH2I', len(sequences), 0, 0, 0, end_offset, len(graph_file))
+        records += struct.pack('<5I', frame_offset, part_offset, end_offset, end_offset, end_offset)
+        for i in range(16):
+            records += struct.pack('4B', *palette[i])
+
+        for (first_frame, end_frame), anim_length in zip(sequences, anim_lengths):
+            end_frame = min(end_frame, len(frames))
+            records += struct.pack('<4H', min(first_frame, len(frames)), max(end_frame - first_frame, 0), anim_length, 0)
+
+        for (clip, duration), frame_timer in zip(frames, frame_timers):
+            first_layer, end_layer = clips[clip] if clip < len(clips) else (0, 0)
+            first_part = part_starts[min(first_layer, len(part_starts) - 1)]
+            end_part = part_starts[min(max(end_layer, first_layer), len(part_starts) - 1)]
+            records += struct.pack('<HBBHH', first_part, min(end_part - first_part, 0xFF), 0, frame_timer, 0)
+
+        for oam_data, destination, x_offset, y_offset in part_fields:
+            records += struct.pack('<HHhHhh', oam_data, 0, 0, destination, x_offset, y_offset)
+
+        return bytes(records), graph_file
+
+    def nds_transformed_size(self, width, height, transform):
+        # the smallest OAM shape and size that fit the layer after rotation
+        # and scaling; when nothing fits, a shapeless 64x64-celled grid size
+        angle, scale_x, scale_y = transform
+        theta = (angle / 0x10000) * 2 * numpy.pi
+        cos, sin = abs(numpy.cos(theta)), abs(numpy.sin(theta))
+
+        minimum_width = (abs(scale_x) * width * cos) + (abs(scale_y) * height * sin)
+        minimum_height = (abs(scale_x) * width * sin) + (abs(scale_y) * height * cos)
+
+        best = None
+        for shape, sizing in enumerate(SIZING_TABLE):
+            for size, (w, h) in enumerate(sizing):
+                if w >= minimum_width and h >= minimum_height and (best is None or w * h < best[2] * best[3]):
+                    best = (shape, size, w, h)
+
+        if best is None:
+            best = (None, None, max(-(int(minimum_width) // -64), 1) * 64, max(-(int(minimum_height) // -64), 1) * 64)
+
+        return best
+
+    def nds_warp_texture(self, pixels, transform, out_width, out_height):
+        # rotate and scale around the center (a binary angle, running
+        # clockwise on screen), exactly like the game's affine sampling
+        angle, scale_x, scale_y = transform
+        if scale_x == 0 or scale_y == 0:
+            return numpy.zeros((out_height, out_width), dtype = numpy.uint32)
+
+        theta = (angle / 0x10000) * 2 * numpy.pi
+        cos, sin = numpy.cos(theta), numpy.sin(theta)
+
+        height, width = pixels.shape
+        out_y, out_x = numpy.indices((out_height, out_width), dtype = numpy.float64)
+        out_x += 0.5 - (out_width / 2)
+        out_y += 0.5 - (out_height / 2)
+
+        source_x = numpy.floor((( cos * out_x) + (sin * out_y)) / scale_x + (width / 2)).astype(int)
+        source_y = numpy.floor(((-sin * out_x) + (cos * out_y)) / scale_y + (height / 2)).astype(int)
+
+        valid = (source_x >= 0) & (source_x < width) & (source_y >= 0) & (source_y < height)
+        warped = numpy.zeros((out_height, out_width), dtype = numpy.uint32)
+        warped[valid] = pixels[source_y[valid], source_x[valid]]
+
+        return warped
+
+    class NdsSpriteHandle:
+        # fills the role CellAnimFile plays for the BG4 archives: it names the
+        # object's animation and pixel entries and its default palette
+        def __init__(self, name, entry_index, palette):
+            self.name = name
+
+            # entry i is the animation data and entry i + 1 the pixel data; a
+            # record pointing at entry 0 (the header) holds no animation data
+            # (e.g. USA FObj.dat sprite 0x1AB)
+            self.anim_file = f"{entry_index:04X}" if entry_index != 0 else ""
+            self.graph_file = f"{entry_index + 1:04X}"
+            self.color_file = "" # these games have no color-animation data
+            self.palette = palette
+
     class ObjectCache:
         def __init__(self, name):
             self.name = name
@@ -495,7 +914,68 @@ class ObjFile:
         def __init__(self, name, input_data):
             self.name = name
             self.data = input_data
-        
+
+        def rlz_decompress_data(self):
+            if self.data is None: return bytearray([])
+
+            data = self.data
+
+            """Decompress the NDS games' custom RLZ block compression (this is distinct from Nintendo's LZ10)"""
+            try:
+                in_off = 0
+
+                def read_rlz_uint():
+                    nonlocal in_off
+                    composite = data[in_off]
+                    in_off += 1
+                    extra_bytes = composite >> 6
+                    value = composite & 0x3F
+                    for i in range(extra_bytes):
+                        value |= data[in_off] << (6 * (i + 1))
+                        in_off += 1
+                    return value
+
+                out_size = read_rlz_uint()
+                block_count = read_rlz_uint() + 1
+
+                out = bytearray(out_size)
+                out_off = 0
+                for _ in range(block_count):
+                    block_length = int.from_bytes(data[in_off:in_off + 2], 'little')
+                    in_off += 2
+                    target = in_off + block_length
+                    block_done = False
+                    while in_off < target and not block_done:
+                        control = data[in_off]
+                        in_off += 1
+                        for _ in range(4):
+                            match control & 3:
+                                case 0:
+                                    block_done = True
+                                    break
+                                case 1:
+                                    out[out_off] = data[in_off]
+                                    in_off += 1
+                                    out_off += 1
+                                case 2:
+                                    offset = data[in_off] | ((data[in_off + 1] & 0xF0) << 4)
+                                    length = (data[in_off + 1] & 0x0F) + 2
+                                    in_off += 2
+                                    for _ in range(length):
+                                        out[out_off] = out[out_off - offset]
+                                        out_off += 1
+                                case 3:
+                                    length = data[in_off] + 2
+                                    value = data[in_off + 1]
+                                    in_off += 2
+                                    out[out_off:out_off + length] = bytes([value]) * length
+                                    out_off += length
+                            control >>= 2
+
+                return bytes(out)
+            except Exception:
+                return data
+
         def blz77_decompress_data(self): # stole this from danius
             if self.data is None: return bytearray([])
 
@@ -569,11 +1049,22 @@ class ObjFile:
             self.input_data = BytesIO(input_data)
             # with open("test.dat", "wb") as test:
             #     test.write(input_data)
-            
+
             self.game_id = game_id
             self.bounding_box = None
-            
+
             match self.game_id:
+                case "ML2": # Partners in Time --- not a native layout: ObjFile.nds_convert_object translates the NDS data into this beforehand (with a 16-bit animation count, since PiT sprites can exceed 255)
+                    self.anim_num, color_mode, self.renderer_num, unused, self.anim_file_length, self.graph_file_length = struct.unpack('<H2BH2I', self.input_data.read(0xE))
+                    frame_offset, part_offset, part_trans_offset, full_trans_offset, renderer_offset = struct.unpack('<5I', self.input_data.read(0x14))
+
+                    self.anim_size = 8
+                    self.frame_size = 8
+                    self.part_size = 12
+                    self.part_trans_size = 16
+                    self.full_trans_size = 20
+                    self.renderer_size = 84
+
                 case "ML3R": # Bowser's Inside Story DX --- added bounding boxes, added a new unused offset in the header (might be padding)
                     self.anim_num, color_mode, self.renderer_num, unused, self.anim_file_length, self.graph_file_length = struct.unpack('<4B2I', self.input_data.read(0xC))
                     self.bounding_box = struct.unpack('<4h', self.input_data.read(0x8))
@@ -679,10 +1170,10 @@ class ObjFile:
 
                 if self.horizontal_flip != 0 and self.horizontal_flip != -1:
                     print(f"'self.horizontal_flip' IS WEIRD IN ONE OF THE SPRITE PARTS: {self.horizontal_flip}")
-                
+
                 if game_id in GAME_IDS_THAT_USE_NORMAL_MAPS:
                     self.normal_map, = struct.unpack('<I', input_data[12:])
-    
+
         class Transform:
             def __init__(self, input_data, game_id, has_offset = True):
                 if has_offset:
@@ -805,15 +1296,15 @@ class ObjFile:
         def get_anim_data(self, index_num):
             data_size = self.anim_size
             data_offset = self.anim_offset
-    
+
             return self.Animation(self.get_data_at_offset(data_size, data_offset, index_num), self.game_id)
-    
+
         def get_frame_data(self, index_num):
             data_size = self.frame_size
             data_offset = self.frame_offset
-    
+
             return self.AnimFrame(self.get_data_at_offset(data_size, data_offset, index_num), self.game_id)
-    
+
         def get_part_data(self, index_num):
             data_size = self.part_size
             data_offset = self.part_offset
@@ -838,7 +1329,7 @@ class ObjFile:
         def get_renderer_data(self, index_num):
             data_size = self.renderer_size
             data_offset = self.renderer_offset
-    
+
             return self.Renderer(self.get_data_at_offset(data_size, data_offset, index_num), self.game_id)
     
         def get_normal_data(self, index_num):
