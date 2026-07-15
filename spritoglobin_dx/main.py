@@ -882,7 +882,7 @@ class MainWindow(QtWidgets.QMainWindow):
             if lang_key == "None":
                 lang_key = QtCore.QLocale.system().name()
             
-            github_lang_key = LANGUAGES[lang_key]['github_lang'] if lang_key in LANGUAGES else "en"
+            github_lang_key = LANGUAGES[lang_key]['github_lang'] if lang_key in LANGUAGES else None
             if github_lang_key is None:
                 github_lang_key = "en"
 

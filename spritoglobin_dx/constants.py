@@ -71,12 +71,14 @@ LANGUAGES = {
 }
 
 
-GAME_IDS_THAT_ARE_CURRENTLY_SUPPORTED = ["ML5", "ML1R", "ML3R", "ML2"]
+# used for sprito dx ui
+GAME_IDS_THAT_ARE_CURRENTLY_SUPPORTED = ["ML2", "ML5", "ML1R", "ML3R"]
 GAME_IDS_THAT_ARE_ON_3DS = ["ML4", "ML5", "ML1R", "ML3R"]
-GAME_IDS_THAT_ARE_ON_NDS = ["ML2"] # ML3 (the original DS release) belongs here once supported
 
+# general purpose
 GAME_IDS_THAT_USE_BG4 = ["ML5", "ML1R", "ML3R"]
 GAME_IDS_THAT_USE_BOUNDING_BOXES = ["ML3R"]
 GAME_IDS_THAT_USE_LOW_FRAMERATE = ["ML3R"]
 GAME_IDS_THAT_USE_MATRIX_INVERSION = ["ML1R", "ML3R"]
 GAME_IDS_THAT_USE_NORMAL_MAPS = ["ML1R", "ML3R"]
+GAME_IDS_THAT_ARE_ON_NDS = ["ML2", "ML3"] # TODO: replace with "game ids that use palettes" to further generalize (lumping superstar saga in there too lol, just in case)
