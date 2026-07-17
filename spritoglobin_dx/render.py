@@ -336,9 +336,12 @@ class SpriteRenderer:
         g_r = self.get_rotation_matrix(*global_rotation)
 
         global_matrix = g_s @ g_t @ g_r
-        
-        global_palette = [value / 255 for color in img_data[1].values() for value in color]
-        global_palette_bytes = struct.pack('64f', *global_palette)
+
+        if img_data[1] is not None:
+            global_palette = [value / 255 for color in img_data[1].values() for value in color]
+            global_palette_bytes = struct.pack('64f', *global_palette)
+        else:
+            global_palette_bytes = bytes(256)
 
         self.program['u_globalPalette'].write(global_palette_bytes)
 
@@ -359,7 +362,7 @@ class SpriteRenderer:
 
                 local_matrix = l_s @ l_t @ l_r
 
-                for graphics_buffer, size, offset, base_matrix, renderer_data in parts_list:
+                for graphics_buffer, size, offset, base_matrix, part_matrix, renderer_data in parts_list:
                     a, b, x, c, d, y = base_matrix
 
                     part_sr = numpy.array([
@@ -376,9 +379,18 @@ class SpriteRenderer:
                         [0, 0, 0, 1],
                     ], dtype='f4')
 
-                    part_matrix = part_sr @ part_t
+                    pattern_matrix = part_sr @ part_t
 
-                    full_matrix = self.projection @ global_matrix @ local_matrix @ part_matrix
+                    a, b, x, c, d, y = part_matrix
+
+                    part_matrix = numpy.array([
+                        [a, -b, 0,  x],
+                        [-c, d, 0, -y],
+                        [0, 0, 1,  0],
+                        [0, 0, 0,  1],
+                    ], dtype='f4')
+
+                    full_matrix = self.projection @ global_matrix @ local_matrix @ pattern_matrix @ part_matrix
 
                     tex = self.context.texture(size, 4, graphics_buffer)
                     tex.filter = (self.filtering_mode, self.filtering_mode)

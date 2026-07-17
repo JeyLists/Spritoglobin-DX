@@ -139,14 +139,20 @@ class ObjFile:
         if cached_object.name != object_name:
             current_obj_data = self.cellanim_files[object_name]
 
+            # TODO: generalize this
             if self.game_id in GAME_IDS_THAT_ARE_ON_NDS:
                 # everything NDS-shaped about the data ends right here
+                with open ("testpit.dat", "wb") as test:
+                    test.write(self.data_files[current_obj_data.anim_file].rlz_decompress_data())
                 anim_data, graph_file = self.nds_convert_object(
                     self.data_files[current_obj_data.anim_file].rlz_decompress_data(),
                     self.data_files[current_obj_data.graph_file].rlz_decompress_data(),
                     self.nds_palette_rgba(current_obj_data.palette),
                     self.nds_is_bobj,
                 )
+
+                anim_data = self.data_files[current_obj_data.anim_file].rlz_decompress_data()
+                graph_file = self.data_files[current_obj_data.graph_file].rlz_decompress_data()
 
                 cached_object.name = object_name
                 cached_object.obj_anim_data = self.AnimData(anim_data, self.game_id)
@@ -194,9 +200,12 @@ class ObjFile:
             "game_id": self.game_id,
         }
     
-    def get_object_palette(self, object_name, animation_index, color_anim_index = None, cache_id = None):
+    def get_object_pic200_palette(self, object_name, animation_index, color_anim_index = None, cache_id = None):
         self.cache_object(object_name, cache_id)
         cached_object = self.get_cached_object(cache_id)
+
+        if self.game_id not in GAME_IDS_THAT_USE_PICA200_RENDERING:
+            return None
 
         obj_data = cached_object.obj_anim_data
         color_data = cached_object.color_data
@@ -208,6 +217,14 @@ class ObjFile:
         except AttributeError:
             animation_timer = 0
             color_timer = 0
+
+        if anim_data.anim_length is None:
+            anim_length = 0
+            for i in range(anim_data.total_frames):
+                frame_data = cached_object.obj_anim_data.get_frame_data(anim_data.first_frame + i)
+                anim_length += frame_data.anim_duration
+        else:
+            anim_length = anim_data.anim_length
 
         anim_set = color_data.get_rgba(
             anim_index        = animation_index,
@@ -222,7 +239,7 @@ class ObjFile:
             for i, channel in enumerate(color_mod):
                 if channel is not None:
                     renderer_colors[renderer_channel][i] = channel
-        
+    
         return renderer_colors
     
     def get_object_properties(self, object_name, cache_id = None):
@@ -252,16 +269,29 @@ class ObjFile:
         color_data = cached_object.color_data
 
         keyframe_list = [0]
+        timer_accumulate = 0
         for i in range(anim_data.total_frames - 1):
             frame_data = cached_object.obj_anim_data.get_frame_data(anim_data.first_frame + i)
-            keyframe_list.append(frame_data.anim_timer)
+            if frame_data.anim_timer is None:
+                timer_accumulate += frame_data.anim_duration
+                keyframe_list.append(timer_accumulate)
+            else:
+                keyframe_list.append(frame_data.anim_timer)
         
         has_color_data = animation_index in color_data.animations
+
+        if anim_data.anim_length is None:
+            anim_length = 0
+            for i in range(anim_data.total_frames):
+                frame_data = cached_object.obj_anim_data.get_frame_data(anim_data.first_frame + i)
+                anim_length += frame_data.anim_duration
+        else:
+            anim_length = anim_data.anim_length
 
         return {
             "first_frame":    anim_data.first_frame,
             "total_frames":   anim_data.total_frames,
-            "length":         anim_data.anim_length,
+            "length":         anim_length,
             "keyframes":      keyframe_list,
             "bounding_box":   anim_data.bounding_box,
             "has_color_data": has_color_data,
@@ -277,11 +307,26 @@ class ObjFile:
         if frame_index is None:
             try:
                 anim_data = cached_object.obj_anim_data.get_anim_data(animation_index)
-                timer = self.animation_timer % anim_data.anim_length
 
+                if anim_data.anim_length is None:
+                    anim_length = 0
+                    for i in range(anim_data.total_frames):
+                        frame_data = cached_object.obj_anim_data.get_frame_data(anim_data.first_frame + i)
+                        anim_length += frame_data.anim_duration
+                else:
+                    anim_length = anim_data.anim_length
+
+                timer = self.animation_timer % anim_length
+
+                timer_accumulate = 0
                 for i in range(anim_data.total_frames):
                     frame_data = cached_object.obj_anim_data.get_frame_data(anim_data.first_frame + i)
-                    if not timer >= frame_data.anim_timer:
+                    if frame_data.anim_timer is None:
+                        timer_accumulate += frame_data.anim_duration
+                        anim_timer = timer_accumulate
+                    else:
+                        anim_timer = frame_data.anim_timer
+                    if not timer >= anim_timer:
                         frame_index = i
                         break
             except AttributeError:
@@ -303,10 +348,19 @@ class ObjFile:
         else:
             invert_matrix = False
 
+        timer_accumulate = 0
+        if frame_data.anim_timer is None:
+            for i in range(frame_index):
+                test_frame_data = cached_object.obj_anim_data.get_frame_data(anim_data.first_frame + i)
+                timer_accumulate += test_frame_data.anim_duration
+            anim_timer = timer_accumulate
+        else:
+            anim_timer = frame_data.anim_timer
+
         return {
             "first_part":         frame_data.first_part,
             "total_parts":        frame_data.total_parts,
-            "keyframe_timer":     frame_data.anim_timer,
+            "keyframe_timer":     anim_timer,
             "transform_index":    frame_data.transform - 1,
             "transform":          transform_matrix,
             "transform_inverted": invert_matrix,
@@ -317,18 +371,13 @@ class ObjFile:
         cached_object = self.get_cached_object(cache_id)
 
         part_data = cached_object.obj_anim_data.get_part_data(sprite_part_index)
-        
-        part_size = (part_data.oam_data) & 0b11
-        part_shape = (part_data.oam_data >> 2) & 0b11
-        x_flip = part_data.oam_data & 0x100 != 0
-        y_flip = part_data.oam_data & 0x200 != 0
 
         return {
-            "oam_size":        part_size,
-            "oam_shape":       part_shape,
-            "horizontal_flip": x_flip,
-            "vertical_flip":   y_flip,
-            "size":            SIZING_TABLE[part_shape][part_size],
+            "oam_size":        part_data.part_size,
+            "oam_shape":       part_data.part_shape,
+            "horizontal_flip": part_data.x_flip,
+            "vertical_flip":   part_data.y_flip,
+            "size":            SIZING_TABLE[part_data.part_shape][part_data.part_size],
             "buffer_offset":   part_data.graphics_buffer_offset,
             "offset":          (part_data.x_offset, part_data.y_offset),
             "renderer_index":  part_data.renderer,
@@ -385,11 +434,25 @@ class ObjFile:
             try:
                 anim_data = obj_anim_data.get_anim_data(animation_index)
 
-                timer = self.animation_timer % anim_data.anim_length
+                if anim_data.anim_length is None:
+                    anim_length = 0
+                    for i in range(anim_data.total_frames):
+                        frame_data = cached_object.obj_anim_data.get_frame_data(anim_data.first_frame + i)
+                        anim_length += frame_data.anim_duration
+                else:
+                    anim_length = anim_data.anim_length
 
+                timer = self.animation_timer % anim_length
+
+                timer_accumulate = 0
                 for i in range(anim_data.total_frames):
                     frame_data = obj_anim_data.get_frame_data(anim_data.first_frame + i)
-                    if not timer >= frame_data.anim_timer:
+                    if frame_data.anim_timer is None:
+                        timer_accumulate += frame_data.anim_duration
+                        anim_timer = timer_accumulate
+                    else:
+                        anim_timer = frame_data.anim_timer
+                    if not timer >= anim_timer:
                         frame_index = i
                         break
 
@@ -1054,140 +1117,230 @@ class ObjFile:
             self.bounding_box = None
 
             match self.game_id:
-                case "ML2": # Partners in Time --- not a native layout: ObjFile.nds_convert_object translates the NDS data into this beforehand (with a 16-bit animation count, since PiT sprites can exceed 255)
-                    self.anim_num, color_mode, self.renderer_num, unused, self.anim_file_length, self.graph_file_length = struct.unpack('<H2BH2I', self.input_data.read(0xE))
-                    frame_offset, part_offset, part_trans_offset, full_trans_offset, renderer_offset = struct.unpack('<5I', self.input_data.read(0x14))
-
-                    self.anim_size = 8
-                    self.frame_size = 8
-                    self.part_size = 12
-                    self.part_trans_size = 16
-                    self.full_trans_size = 20
-                    self.renderer_size = 84
-
                 case "ML3R": # Bowser's Inside Story DX --- added bounding boxes, added a new unused offset in the header (might be padding)
                     self.anim_num, color_mode, self.renderer_num, unused, self.anim_file_length, self.graph_file_length = struct.unpack('<4B2I', self.input_data.read(0xC))
                     self.bounding_box = struct.unpack('<4h', self.input_data.read(0x8))
-                    frame_offset, part_offset, part_trans_offset, full_trans_offset, renderer_offset, normal_offset, unused_offset = struct.unpack('<7I', self.input_data.read(0x1C))
+                    self.frame_offset, self.part_offset, self.part_trans_offset, self.full_trans_offset, self.renderer_offset, self.normal_offset, unused_offset = struct.unpack('<7I', self.input_data.read(0x1C))
+                    self.tiled_mode = True
 
                     self.anim_size = 16
                     self.frame_size = 8
                     self.part_size = 16
                     self.part_trans_size = 16
-                    self.full_trans_size = 20
-                    self.renderer_size = 84
 
+                    self.renderer_size = 84
+                    self.full_trans_size = 20
                     self.normal_size = 48
-                    self.normal_offset = normal_offset
 
                     if unused_offset != 0 and not test: print(f"THE 'unused_offset_1' VALUE IN CLASS ObjFile.AnimData IS USED ACTUALLY: unused_offset_1 = {unused_offset}")
+                    if unused != 0 and not test: print(f"THE 'unused' VALUE IN CLASS ObjFile.AnimData IS USED ACTUALLY: unused = {unused}")
 
                 case "ML1R": # Superstar Saga DX --- added normal maps (or something lighting related)
                     self.anim_num, color_mode, self.renderer_num, unused, self.anim_file_length, self.graph_file_length = struct.unpack('<4B2I', self.input_data.read(0xC))
-                    frame_offset, part_offset, part_trans_offset, full_trans_offset, renderer_offset, normal_offset = struct.unpack('<6I', self.input_data.read(0x18))
+                    self.frame_offset, self.part_offset, self.part_trans_offset, self.full_trans_offset, self.renderer_offset, self.normal_offset = struct.unpack('<6I', self.input_data.read(0x18))
+                    self.tiled_mode = True
 
                     self.anim_size = 8
                     self.frame_size = 8
                     self.part_size = 16
                     self.part_trans_size = 16
-                    self.full_trans_size = 20
-                    self.renderer_size = 84
 
+                    self.renderer_size = 84
+                    self.full_trans_size = 20
                     self.normal_size = 48
-                    self.normal_offset = normal_offset
+
+                    if unused != 0 and not test: print(f"THE 'unused' VALUE IN CLASS ObjFile.AnimData IS USED ACTUALLY: unused = {unused}")
 
                 case "ML4" | "ML5": # Dream Team & Paper Jam --- complete overhaul from the previous games
                     self.anim_num, color_mode, self.renderer_num, unused, self.anim_file_length, self.graph_file_length = struct.unpack('<4B2I', self.input_data.read(0xC))
-                    frame_offset, part_offset, part_trans_offset, full_trans_offset, renderer_offset = struct.unpack('<5I', self.input_data.read(0x14))
+                    self.frame_offset, self.part_offset, self.part_trans_offset, self.full_trans_offset, self.renderer_offset = struct.unpack('<5I', self.input_data.read(0x14))
+                    self.tiled_mode = True
 
                     self.anim_size = 8
                     self.frame_size = 8
                     self.part_size = 12
                     self.part_trans_size = 16
-                    self.full_trans_size = 20
+
                     self.renderer_size = 84
+                    self.full_trans_size = 20
 
-            if unused != 0 and not test: print(f"THE 'unused' VALUE IN CLASS ObjFile.AnimData IS USED ACTUALLY: unused = {unused}")
-            if full_trans_offset - part_trans_offset != 0 and not test: print(f"THE 'part_trans_offset' VALUE IN CLASS ObjFile.AnimData IS USED IN THIS FILE")
-    
-            self.default_renderer_colors = {}
-            for i in range(16):
-                self.default_renderer_colors[i] = list(struct.unpack('4B', self.input_data.read(4)))
+                    if unused != 0 and not test: print(f"THE 'unused' VALUE IN CLASS ObjFile.AnimData IS USED ACTUALLY: unused = {unused}")
+                    if self.full_trans_offset - self.part_trans_offset != 0 and not test: print(f"THE 'part_trans_offset' VALUE IN CLASS ObjFile.AnimData IS USED IN THIS FILE")
 
-            self.color_mode = [ # key, bits-per-pixel
-                ["RGBA8888", 32],
-                ["RGB888",   24],
-                ["RGBA5551", 16],
-                ["RGB565",   16],
-                ["RGBA4444", 16],
-                ["LA88",     16],
-                ["HILO88",   16],
-                ["L8",        8],
-                ["A8",        8],
-                ["LA44",      8],
-                ["L4",        4],
-                ["A4",        4],
-                ["ETC1",      4],
-                ["ETC1A4",    8],
-            ][color_mode]
+                case "ML2": # Partners in Time
+                    # TODO: unknowns
+                    flags, part_trans_num, unk, unk, unk, unk = struct.unpack('<6H', self.input_data.read(0xC))
+                    self.anim_num, frame_num, part_set_num, part_num, unk = struct.unpack('<4HI', self.input_data.read(0xC))
 
+                    # things are laid out like this so it's easy to see what bits are used where
+                    self.graph_shift =    (flags & 0b0000000001110000) >> 4
+                    self.tiled_mode  =     flags & 0b0010000000000000 == 0 # TODO: expose this to the user
+                    color_mode       = int(flags & 0b0100000000000000 != 0)
 
-            anim_offset = self.input_data.tell()
-    
-            self.anim_offset = anim_offset
-            self.frame_offset = frame_offset
-            if part_offset != 0:
-                self.sprite_sheet_mode = False
-                self.part_offset = part_offset
+                    self.color_mode = [ # key, bits-per-pixel
+                        ["I4", 4],
+                        ["I8", 8],
+                    ][color_mode]
+
+                    self.anim_offset = self.input_data.tell()
+
+                    self.anim_size = 8
+                    self.frame_size = 4
+                    self.part_size = 12
+                    self.part_trans_size = 12
+
+                    self.part_set_size = 4
+
+                    self.frame_offset = self.anim_offset + (self.anim_num * self.anim_size)
+                    self.part_set_offset = self.frame_offset + (frame_num * self.frame_size)
+                    self.part_offset = self.part_set_offset + (part_set_num * self.part_set_size)
+                    self.part_trans_offset = self.part_offset + (part_num * self.part_size)
+
+            if self.game_id in GAME_IDS_THAT_USE_PICA200_RENDERING:
+                self.color_mode = [ # key, bits-per-pixel
+                    ["RGBA8888", 32],
+                    ["RGB888",   24],
+                    ["RGBA5551", 16],
+                    ["RGB565",   16],
+                    ["RGBA4444", 16],
+                    ["LA88",     16],
+                    ["HILO88",   16],
+                    ["L8",        8],
+                    ["A8",        8],
+                    ["LA44",      8],
+                    ["L4",        4],
+                    ["A4",        4],
+                    ["ETC1",      4],
+                    ["ETC1A4",    8],
+                ][color_mode]
+
+                self.default_renderer_colors = {}
+                for i in range(16):
+                    self.default_renderer_colors[i] = list(struct.unpack('4B', self.input_data.read(4)))
+                self.anim_offset = self.input_data.tell()
             else:
-                self.sprite_sheet_mode = True
-                self.part_offset = anim_offset + (self.anim_num * self.anim_size)
-            self.part_trans_offset = part_trans_offset
-            self.full_trans_offset = full_trans_offset
-            self.renderer_offset = renderer_offset
+                self.renderer_num = 0
+
+            if self.game_id in GAME_IDS_THAT_USE_SPRITE_SHEETS:
+                if self.part_offset != 0:
+                    self.sprite_sheet_mode = False
+                else:
+                    self.sprite_sheet_mode = True
+                    self.part_offset = self.anim_offset + (self.anim_num * self.anim_size)
+            else:
+                self.sprite_sheet_mode = False
     
         class Animation:
-            def __init__(self, input_data, game_id):
-                self.first_frame, self.total_frames, self.anim_length, unused = struct.unpack('<4H', input_data[:8])
+            def __init__(self, parent, input_data, game_id):
+                if game_id in GAME_IDS_THAT_USE_ALT_COUNTING_SCHEMES:
+                    # TODO: unknowns
+                    self.first_frame, last_frame, unk, unk = struct.unpack('<4H', input_data[:8])
+                    self.total_frames = last_frame - self.first_frame
+                    self.anim_length = None
+                else:
+                    self.first_frame, self.total_frames, self.anim_length, unused = struct.unpack('<4H', input_data[:8])
+                    if unused != 0: print(f"THE 'unused' VALUE IN CLASS ObjFile.AnimData.Animation IS USED ACTUALLY: unused = {unused}")
 
                 if game_id in GAME_IDS_THAT_USE_BOUNDING_BOXES:
                     self.bounding_box = struct.unpack('<4h', input_data[8:])
                 else:
                     self.bounding_box = None
-
-                if unused != 0: print(f"THE 'unused' VALUE IN CLASS ObjFile.AnimData.Animation IS USED ACTUALLY: unused = {unused}")
     
         class AnimFrame:
-            def __init__(self, input_data, game_id):
-                self.first_part, self.total_parts, self.invert_matrix_rotation, self.anim_timer, self.transform = struct.unpack('<HBBHH', input_data)
+            def __init__(self, parent, input_data, game_id):
+                if game_id in GAME_IDS_THAT_USE_SPLIT_PATTERN_DATA:
+                    part_set_index, self.anim_duration = struct.unpack('<2H', input_data)
+                    self.first_part, last_part = struct.unpack('<2H', parent.get_data_at_offset(parent.part_set_size, parent.part_set_offset, part_set_index))
+                    self.total_parts = last_part - self.first_part
+                    self.transform = 0 # TODO: find a way to make it obvious whether transform is unused or straight up not supported
+                    self.anim_timer = None
+                else:
+                    self.first_part, self.total_parts, self.invert_matrix_rotation, self.anim_timer, self.transform = struct.unpack('<HBBHH', input_data)
+                    self.anim_duration = None
 
                 if game_id not in GAME_IDS_THAT_USE_MATRIX_INVERSION:
                     self.invert_matrix_rotation = None
     
-        class SpritePart: # TODO: figure out what "horizontal_flip" actually does
-            def __init__(self, input_data, game_id):
-                self.oam_data, self.renderer, self.horizontal_flip, self.graphics_buffer_offset, self.x_offset, self.y_offset = struct.unpack('<HHhHhh', input_data[:12])
+        class SpritePart: # TODO: figure out what "horizontal_flip" actually does in ML4+
+            def __init__(self, parent, input_data, game_id):
+                match game_id:
+                    case "ML2":
+                        # TODO: unknowns
+                        # TODO: do stuff with depth and stuff
+                        attr0, attr1, attr2, unk, attr4, unk = struct.unpack('<6H', input_data)
+                        # things are laid out like this so it's easy to see what bits are used where
+                        self.y_offset    = ((attr0 & 0b0000000011111111) ^ 0x80) - 0x80
+                        trans_flag       =  (attr0 & 0b0000000100000000) != 0
+                        double_size_flag =  (attr0 & 0b0000001000000000) != 0
+                        self.depth       =  (attr0 & 0b0010000000000000) >> 13
+                        self.part_shape  =  (attr0 & 0b1100000000000000) >> 14
+        
+                        self.x_offset   = ((attr1 & 0b0000000111111111) ^ 0x100) - 0x100
+                        self.x_flip     =  (attr1 & 0b0001000000000000) != 0
+                        self.y_flip     =  (attr1 & 0b0010000000000000) != 0
+                        self.part_size  =  (attr1 & 0b1100000000000000) >> 14
 
-                if self.horizontal_flip != 0 and self.horizontal_flip != -1:
-                    print(f"'self.horizontal_flip' IS WEIRD IN ONE OF THE SPRITE PARTS: {self.horizontal_flip}")
+                        self.graphics_buffer_offset = (attr2 & 0x3FF) << parent.graph_shift
+
+                        # TODO: make this shit available to all the thingies that get bounding boxes based on sprite
+                        self.transform = (attr4 & 0x3FF) + 1 if trans_flag else 0
+
+                        self.renderer = None
+                    case _:
+                        oam_data, self.renderer, self.horizontal_flip, self.graphics_buffer_offset, self.x_offset, self.y_offset = struct.unpack('<HHhHhh', input_data[:12])
+                        self.part_size =  (oam_data)      & 0b11
+                        self.part_shape = (oam_data >> 2) & 0b11
+                        self.x_flip =     (oam_data)      & 0x100 != 0
+                        self.y_flip =     (oam_data)      & 0x200 != 0
+                        self.graphics_buffer_offset *= 0x80
+
+                        if self.horizontal_flip != 0 and self.horizontal_flip != -1:
+                            print(f"'self.horizontal_flip' IS WEIRD IN ONE OF THE SPRITE PARTS: {self.horizontal_flip}")
+
+                        self.transform = 0 # TODO: find a way to make it obvious whether transform is unused or straight up not supported
 
                 if game_id in GAME_IDS_THAT_USE_NORMAL_MAPS:
                     self.normal_map, = struct.unpack('<I', input_data[12:])
+                
+                if game_id in GAME_IDS_THAT_USE_ALT_COORDINATES_SYSTEM: # TODO: make these changes reflect in sprite part info so it's not dishonest to the end user
+                    x, y = SIZING_TABLE[self.part_shape][self.part_size]
+                    if not double_size_flag:
+                        self.x_offset += x // 2
+                        self.y_offset += y // 2
+                    else:
+                        self.x_offset += x
+                        self.y_offset += y
+
+                    self.y_offset *= -1
 
         class Transform:
-            def __init__(self, input_data, game_id, has_offset = True):
-                if has_offset:
-                    matrix = struct.unpack('<4f2h', input_data)
-                else:
-                    matrix = struct.unpack('<4f', input_data) + (0, 0)
+            def __init__(self, parent, input_data, game_id, has_offset = True):
+                if game_id in GAME_IDS_THAT_USE_MATRICES:
+                    if has_offset:
+                        matrix = struct.unpack(f'<4{"f" if game_id in GAME_IDS_THAT_USE_FLOATS else "h"}2h', input_data)
+                    else:
+                        matrix = struct.unpack(f'<4{"f" if game_id in GAME_IDS_THAT_USE_FLOATS else "h"}', input_data) + (0, 0)
 
-                self.matrix = [
-                    matrix[0], matrix[2],  matrix[4],
-                    matrix[1], matrix[3], -matrix[5],
-                ]
+                    if game_id not in GAME_IDS_THAT_USE_FLOATS:
+                        matrix = tuple([matrix[i] / 0x100 for i in range(6)])
+
+                    self.matrix = [
+                        matrix[0], matrix[2],  matrix[4],
+                        matrix[1], matrix[3], -matrix[5],
+                    ]
+                else:
+                    # TODO: unknowns? maybe?
+                    angle, scale_x, scale_y = struct.unpack('<Hhh6x', input_data)
+                    theta = (angle / 0x10000) * 2 * numpy.pi
+                    scale_x /= 0x100
+                    scale_y /= 0x100
+                    self.matrix = [
+                        scale_x * numpy.cos(theta), -scale_y * numpy.sin(theta), 0,
+                        scale_x * numpy.sin(theta),  scale_y * numpy.cos(theta), 0,
+                    ]
     
         class Renderer:
-            def __init__(self, input_data, game_id):
+            def __init__(self, parent, input_data, game_id):
                 input_data = BytesIO(input_data)
 
                 # TODO: unknown
@@ -1238,11 +1391,11 @@ class ObjFile:
                 if unused != 0: print(f"THE 'unused' VALUE IN CLASS ObjFile.AnimData.Renderer IS USED ACTUALLY: unused = {unused}")
     
         class NormalMap: # TODO: idek if this is accurate, but it's probably something to do with lighting
-            def __init__(self, input_data, game_id):
+            def __init__(self, parent, input_data, game_id):
                 self.input_data = input_data # unknown
         
         class SpriteSheetPart:
-            def __init__(self, input_data, game_id, index):
+            def __init__(self, parent, input_data, game_id, index):
                 input_data = BytesIO(input_data)
 
                 segment_group_list_size = 0xC
@@ -1297,46 +1450,46 @@ class ObjFile:
             data_size = self.anim_size
             data_offset = self.anim_offset
 
-            return self.Animation(self.get_data_at_offset(data_size, data_offset, index_num), self.game_id)
+            return self.Animation(self, self.get_data_at_offset(data_size, data_offset, index_num), self.game_id)
 
         def get_frame_data(self, index_num):
             data_size = self.frame_size
             data_offset = self.frame_offset
 
-            return self.AnimFrame(self.get_data_at_offset(data_size, data_offset, index_num), self.game_id)
+            return self.AnimFrame(self, self.get_data_at_offset(data_size, data_offset, index_num), self.game_id)
 
         def get_part_data(self, index_num):
             data_size = self.part_size
             data_offset = self.part_offset
 
             if not self.sprite_sheet_mode:
-                return self.SpritePart(self.get_data_at_offset(data_size, data_offset, index_num), self.game_id)
+                return self.SpritePart(self, self.get_data_at_offset(data_size, data_offset, index_num), self.game_id)
             else:
-                return self.SpriteSheetPart(self.get_data_at_offset(self.frame_offset - self.part_offset, data_offset, 0), self.game_id, index_num)
+                return self.SpriteSheetPart(self, self.get_data_at_offset(self.frame_offset - self.part_offset, data_offset, 0), self.game_id, index_num)
     
         def get_part_transform_data(self, index_num):
             data_size = self.part_trans_size
             data_offset = self.part_trans_offset
     
-            return self.Transform(self.get_data_at_offset(data_size, data_offset, index_num), self.game_id, has_offset = False)
+            return self.Transform(self, self.get_data_at_offset(data_size, data_offset, index_num), self.game_id, has_offset = False)
     
         def get_full_transform_data(self, index_num):
             data_size = self.full_trans_size
             data_offset = self.full_trans_offset
     
-            return self.Transform(self.get_data_at_offset(data_size, data_offset, index_num), self.game_id, has_offset = True)
+            return self.Transform(self, self.get_data_at_offset(data_size, data_offset, index_num), self.game_id, has_offset = True)
     
         def get_renderer_data(self, index_num):
             data_size = self.renderer_size
             data_offset = self.renderer_offset
 
-            return self.Renderer(self.get_data_at_offset(data_size, data_offset, index_num), self.game_id)
+            return self.Renderer(self, self.get_data_at_offset(data_size, data_offset, index_num), self.game_id)
     
         def get_normal_data(self, index_num):
             data_size = self.normal_size
             data_offset = self.normal_offset
     
-            return self.NormalMap(self.get_data_at_offset(data_size, data_offset, index_num), self.game_id)
+            return self.NormalMap(self, self.get_data_at_offset(data_size, data_offset, index_num), self.game_id)
     
     class ColorData:
         def __init__(self, input_data):

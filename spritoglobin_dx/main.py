@@ -1252,7 +1252,7 @@ class MainWindow(QtWidgets.QMainWindow):
                     (1, 1, 1), # scale
                 ]
 
-                palette = self.obj_data.get_object_palette(
+                palette = self.obj_data.get_object_pic200_palette(
                     object_name      = self.obj_list_box.currentText(),
                     animation_index  = self.anim_list_box.currentRow(),
                     color_anim_index = color_anim_index,
@@ -1387,7 +1387,7 @@ class MainWindow(QtWidgets.QMainWindow):
         if sprite_part_properties is not None:
             self.sprite_part_graphics_buffer_info_text.setEnabled(True)
 
-            buf_off = sprite_part_properties["buffer_offset"] * 128
+            buf_off = sprite_part_properties["buffer_offset"]
             buf_size = (sprite_part_properties["size"][0] * sprite_part_properties["size"][1])
             buf_size *= object_properties["color_mode"][1] / 8
             buf_size = round(buf_size)
@@ -1474,7 +1474,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.update_renderer_data()
     
     def update_global_palette(self):
-        if self.obj_data is not None and self.obj_list_box.currentText() != '':
+        if self.obj_data is not None and self.obj_list_box.currentText() != '' and self.current_game_id in GAME_IDS_THAT_USE_PICA200_RENDERING:
             object_name = self.obj_list_box.currentText()
 
             object_properties = self.obj_data.get_object_properties(object_name = object_name)
@@ -1483,7 +1483,7 @@ class MainWindow(QtWidgets.QMainWindow):
             if self.color_anim_list_box.currentRow() != 0 and object_properties["has_color_data"] and self.color_anim_list_box.currentItem() is not None:
                 color_anim_index = int(self.color_anim_list_box.currentItem().text())
 
-            palette = self.obj_data.get_object_palette(
+            palette = self.obj_data.get_object_pic200_palette(
                 object_name      = object_name,
                 animation_index  = self.anim_list_box.currentRow(),
                 color_anim_index = color_anim_index,

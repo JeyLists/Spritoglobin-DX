@@ -125,8 +125,8 @@ def get_sprite_part_set_bounding_box(obj_anim_data, first_part, total_parts, giv
 
         # check for sprite sheet mode
         if not obj_anim_data.sprite_sheet_mode:
-            part_size = (part_data.oam_data) & 0b11
-            part_shape = (part_data.oam_data >> 2) & 0b11
+            part_size = part_data.part_size
+            part_shape = part_data.part_shape
             w, h = SIZING_TABLE[part_shape][part_size]
             x, y = part_data.x_offset, part_data.y_offset
 
@@ -262,7 +262,13 @@ def get_sprite_part_set_graphic(obj_anim_data, graph_file, first_part, total_par
                 if matrix is None:
                     matrix = [1, 0, 0, 0, 1, 0]
 
-                sprite_part_list.append([tile.flatten(), (w, h), (x_offset, y_offset), matrix, renderer_data])
+                if part_data.transform != 0:
+                    transform_data = obj_anim_data.get_part_transform_data(part_data.transform - 1)
+                    part_matrix = list(transform_data.matrix)
+                else:
+                    part_matrix = [1, 0, 0, 0, 1, 0]
+
+                sprite_part_list.append([tile.flatten(), (w, h), (x_offset, y_offset), matrix, part_matrix, renderer_data])
                 continue
 
             target_area = img[y:y+h, x:x+w].astype(numpy.float32)
@@ -306,8 +312,8 @@ def get_sprite_part_set_graphic(obj_anim_data, graph_file, first_part, total_par
     return img.tobytes(), (graph_w, graph_h), (offset_x, offset_y)
 
 def draw_part(part_data, graph_file, obj_anim_data, alpha_divisor = None, ignore_flips = False):
-    part_size = (part_data.oam_data) & 0b11
-    part_shape = (part_data.oam_data >> 2) & 0b11
+    part_size = part_data.part_size
+    part_shape = part_data.part_shape
     img_width, img_height = SIZING_TABLE[part_shape][part_size]
     color_mode = obj_anim_data.color_mode
 
@@ -315,25 +321,24 @@ def draw_part(part_data, graph_file, obj_anim_data, alpha_divisor = None, ignore
     tile_offsets = numpy.arange(tile_amt)[:, None] * 64
     swizzle = (tile_offsets + SWIZZLE_TABLE).flatten()
     
-    start = 128 * part_data.graphics_buffer_offset
+    start = part_data.graphics_buffer_offset
     size = ((img_width * img_height) * color_mode[1]) // 8
     raw = numpy.frombuffer(graph_file[start:start + size], dtype = numpy.uint8)
 
     pixels = get_pixels_from_buffer(raw, color_mode, swizzle)
-    
-    tiles_x, tiles_y = img_width // 8, img_height // 8
-    
+
     if alpha_divisor is not None:
         pixels[..., 3] //= alpha_divisor
-    
-    out = pixels.reshape(tiles_y, tiles_x, 8, 8, 4).transpose(0, 2, 1, 3, 4)
-    out = out.reshape(img_height, img_width, 4)
+
+    if obj_anim_data.tiled_mode:
+        tiles_x, tiles_y = img_width // 8, img_height // 8
+        pixels = pixels.reshape(tiles_y, tiles_x, 8, 8, 4).transpose(0, 2, 1, 3, 4)
+
+    out = pixels.reshape(img_height, img_width, 4)
 
     if not ignore_flips:
-        if part_data.oam_data & 0x100 != 0:
-            out = cv2.flip(out, 1)
-        if part_data.oam_data & 0x200 != 0:
-            out = cv2.flip(out, 0)
+        if part_data.x_flip: out = cv2.flip(out, 1)
+        if part_data.y_flip: out = cv2.flip(out, 0)
     
     return out, (img_width, img_height)
 
@@ -366,9 +371,9 @@ def draw_segment(segment_data, graph_file, obj_anim_data, sheet_size, alpha_divi
     out = out[y:y+h, x:x+w]
 
     # if not ignore_flips:
-    #     if part_data.oam_data & 0x100 != 0:
+    #     if part_data.x_flip:
     #         out = cv2.flip(out, 1)
-    #     if part_data.oam_data & 0x200 != 0:
+    #     if part_data.y_flip:
     #         out = cv2.flip(out, 0)
     
     return out, (img_width, img_height)
@@ -442,7 +447,7 @@ def get_pixels_from_buffer(raw, color_mode, swizzle):
             a = ((raw_pixel >>  0) & 0x0F) << 4 | ((raw_pixel >>  0) & 0x0F)
         case "L4":
             raw = raw.view(numpy.uint8)
-            pixels = numpy.empty(raw.size * 2, dtype=numpy.uint8)
+            pixels = numpy.empty(raw.size * 2, dtype = numpy.uint8)
             pixels[0::2] = raw & 0x0F
             pixels[1::2] = raw >> 4
             raw_pixel = pixels[swizzle]
@@ -452,7 +457,7 @@ def get_pixels_from_buffer(raw, color_mode, swizzle):
             a = raw_pixel | 0xFF
         case "A4":
             raw = raw.view(numpy.uint8)
-            pixels = numpy.empty(raw.size * 2, dtype=numpy.uint8)
+            pixels = numpy.empty(raw.size * 2, dtype = numpy.uint8)
             pixels[0::2] = raw & 0x0F
             pixels[1::2] = raw >> 4
             raw_pixel = pixels[swizzle]
@@ -471,6 +476,22 @@ def get_pixels_from_buffer(raw, color_mode, swizzle):
             color_block = (raw.view(numpy.uint64)[1::2]).reshape(-1, 4)
 
             pixels = etc1_decompress(color_block, alpha_block)
+        case "I8":
+            raw_pixel = raw.view(numpy.uint8)
+            r = raw_pixel
+            g = raw_pixel
+            b = raw_pixel
+            a = numpy.where(raw_pixel == 0, 0, 255).astype(numpy.uint8)
+        case "I4":
+            raw = raw.view(numpy.uint8)
+            pixels = numpy.empty(raw.size * 2, dtype = numpy.uint8)
+            pixels[0::2] = raw & 0x0F
+            pixels[1::2] = raw >> 4
+            raw_pixel = pixels
+            r = raw_pixel << 4 | raw_pixel & 0x0F
+            g = raw_pixel << 4 | raw_pixel & 0x0F
+            b = raw_pixel << 4 | raw_pixel & 0x0F
+            a = numpy.where(raw_pixel == 0, 0, 255).astype(numpy.uint8)
 
     if not etc1:
         pixels = numpy.stack([r, g, b, a], axis=-1).astype(numpy.uint8)
@@ -605,7 +626,7 @@ def apply_sprite_color(img, obj_anim_data, color_data, renderer_data, default_re
     return img
 
 def transform_image(img, matrix, center, size):
-    M = numpy.eye(3, dtype=numpy.float32)
+    M = numpy.eye(3, dtype = numpy.float32)
     M[0, 0:3] = matrix[0:3]
     M[1, 0:3] = matrix[3:6]
 
@@ -745,7 +766,7 @@ def etc1_decompress(color_block, alpha_block=None):
         alpha = a_data & 0x0F | a_data << 4, a_data & 0xF0 | a_data >> 4
         a = numpy.stack(alpha, axis=2).reshape(blocks_amt, 16)
     else:
-        a = numpy.full((blocks_amt, 16), 255, dtype=numpy.uint8)
+        a = numpy.full((blocks_amt, 16), 255, dtype = numpy.uint8)
     
 
     pixels = numpy.stack([r, g, b, a], axis=-1)
