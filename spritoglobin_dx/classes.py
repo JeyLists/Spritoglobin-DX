@@ -44,7 +44,7 @@ class ObjFile:
 
                 cellanim_info = self.DataFile(name, data)
 
-                cellanim_extract, self.bg4_ca_version, self.valid_ca_entries, self.invalid_ca_entries = self.bg4_extract(cellanim_info.blz77_decompress_data())
+                cellanim_extract, self.bg4_ca_version, self.valid_ca_entries, self.invalid_ca_entries = self.bg4_extract(cellanim_info.decompress_data("blz"))
                 for name in cellanim_extract:
                     self.cellanim_files[name] = self.CellAnimFile(name, cellanim_extract[name])
 
@@ -52,7 +52,8 @@ class ObjFile:
                 for game_key in GAME_IDS_THAT_USE_BG4:
                     tests_completed = True
                     for file in self.cellanim_files:
-                        test = self.AnimData(self.data_files[self.cellanim_files[file].anim_file].blz77_decompress_data(), game_key, test = True)
+                        self.cellanim_files[file].interpret_data(game_key)
+                        test = self.AnimData(self.data_files[cellanim_file.anim_file].decompress_data(game_key), game_key, test = True)
 
                         # if file uses sprite sheet mode, move on TODO: re-enable and finish
                         # if test.sprite_sheet_mode:
@@ -82,19 +83,20 @@ class ObjFile:
                     # entry 0 holds the sprite and palette records, filling the
                     # role that _CA_INFO_ fills in the BG4 archives
                     self.nds_is_bobj, sprites, self.nds_palettes = self.nds_header_extract(data, len(nds_extract))
-                    for i, (entry_index, palette) in enumerate(sprites):
+                    for i, data in enumerate(sprites):
                         name = f"Sprite 0x{i:03X}"
-                        self.cellanim_files[name] = self.NdsSpriteHandle(name, entry_index, palette)
+                        self.cellanim_files[name] = self.CellAnimFile(name, data)
 
                 if game_id is None:
                     for game_key in GAME_IDS_THAT_ARE_ON_NDS:
                         tests_completed = True
                         for file in self.cellanim_files:
+                            self.cellanim_files[file].interpret_data(game_key)
                             # if the sprite has no animation data, move on
-                            if self.cellanim_files[file].anim_file == "":
+                            if self.cellanim_files[file].anim_file == "0000":
                                 continue
 
-                            test = self.data_files[self.cellanim_files[file].anim_file].rlz_decompress_data()
+                            test = self.data_files[self.cellanim_files[file].anim_file].decompress_data(game_key)
 
                             if len(test) < 0x18:
                                 tests_completed = False
@@ -123,12 +125,15 @@ class ObjFile:
         if self.game_id is None:
             # all tests failed, report error 100 ("Bad Game ID Tests")
             raise InvalidObjectFileError(100)
+
+        for file in self.cellanim_files: # just in case
+            self.cellanim_files[file].interpret_data(self.game_id)
     
     def perform_tests(self):
         return
 
         for file in self.cellanim_files:
-            test = self.AnimData(self.data_files[self.cellanim_files[file].anim_file].blz77_decompress_data(), self.game_id)
+            test = self.AnimData(self.data_files[self.cellanim_files[file].anim_file].decompress_data(self.game_id), self.game_id)
     
     def cache_object(self, object_name, cache_id = None):
         if cache_id is None:
@@ -143,21 +148,22 @@ class ObjFile:
             if self.game_id in GAME_IDS_THAT_ARE_ON_NDS:
                 # everything NDS-shaped about the data ends right here
                 with open ("testpit.dat", "wb") as test:
-                    test.write(self.data_files[current_obj_data.anim_file].rlz_decompress_data())
+                    test.write(self.data_files[current_obj_data.anim_file].decompress_data(self.game_id))
                 anim_data, graph_file = self.nds_convert_object(
-                    self.data_files[current_obj_data.anim_file].rlz_decompress_data(),
-                    self.data_files[current_obj_data.graph_file].rlz_decompress_data(),
-                    self.nds_palette_rgba(current_obj_data.palette),
+                    self.data_files[current_obj_data.anim_file].decompress_data(self.game_id),
+                    self.data_files[current_obj_data.graph_file].decompress_data(self.game_id),
+                    self.nds_palette_rgba(current_obj_data.palette_entry),
                     self.nds_is_bobj,
                 )
 
-                anim_data = self.data_files[current_obj_data.anim_file].rlz_decompress_data()
-                graph_file = self.data_files[current_obj_data.graph_file].rlz_decompress_data()
+                anim_data = self.data_files[current_obj_data.anim_file].decompress_data(self.game_id)
+                graph_file = self.data_files[current_obj_data.graph_file].decompress_data(self.game_id)
 
                 cached_object.name = object_name
                 cached_object.obj_anim_data = self.AnimData(anim_data, self.game_id)
                 cached_object.graph_file = graph_file
-                cached_object.color_data = self.ColorData(self.data_files[current_obj_data.color_file].blz77_decompress_data())
+                cached_object.color_data = self.ColorData(self.data_files[current_obj_data.color_file].decompress_data(self.game_id))
+                cached_object.palette_data = self.PaletteData()
 
                 self.cached_objects[cache_id] = cached_object
                 return
@@ -170,22 +176,24 @@ class ObjFile:
             cached_object.name = object_name
 
             if not use_force or not force[0] is not None:
-                cached_object.obj_anim_data = self.AnimData(self.data_files[current_obj_data.anim_file].blz77_decompress_data(), self.game_id)
+                cached_object.obj_anim_data = self.AnimData(self.data_files[current_obj_data.anim_file].decompress_data(self.game_id), self.game_id)
             else:
                 with open(f"{force_root}/{force[0]:04X}.dat", "rb") as test:
                     cached_object.obj_anim_data = self.AnimData(test.read(), "ML4")
 
             if not use_force or not force[1] is not None:
-                cached_object.graph_file = self.data_files[current_obj_data.graph_file].blz77_decompress_data()
+                cached_object.graph_file = self.data_files[current_obj_data.graph_file].decompress_data(self.game_id)
             else:
                 with open(f"{force_root}/{force[1]:04X}.dat", "rb") as test:
                     cached_object.graph_file = test.read()
 
             if not use_force or not force[2] is not None:
-                cached_object.color_data = self.ColorData(self.data_files[current_obj_data.color_file].blz77_decompress_data())
+                cached_object.color_data = self.ColorData(self.data_files[current_obj_data.color_file].decompress_data(self.game_id))
             else:
                 with open(f"{force_root}/{force[2]:04X}.dat", "rb") as test:
                     cached_object.color_data = self.ColorData(test.read())
+            
+            cached_object.palette_data = self.PaletteData() # TODO
             
             self.cached_objects[cache_id] = cached_object
     
@@ -429,6 +437,7 @@ class ObjFile:
         obj_anim_data = cached_object.obj_anim_data
         graph_file    = cached_object.graph_file
         color_data    = cached_object.color_data
+        palette_data  = cached_object.palette_data
 
         if frame_index is None:
             try:
@@ -465,7 +474,8 @@ class ObjFile:
 
         return get_sprite_graphic(
             obj_anim_data       = obj_anim_data, 
-            graph_file          = graph_file, 
+            graph_file          = graph_file,
+            palette_data        = palette_data,
             current_anim_index  = animation_index,
             color_anim_index    = color_anim_index,
             current_frame_index = frame_index,
@@ -482,10 +492,12 @@ class ObjFile:
         
         obj_anim_data = cached_object.obj_anim_data
         graph_file    = cached_object.graph_file
+        palette_data  = cached_object.palette_data
         
         return get_sprite_part_set_graphic(
             obj_anim_data    = obj_anim_data,
             graph_file       = graph_file,
+            palette_data     = palette_data,
             first_part       = first_part,
             total_parts      = total_parts,
             highlighted_part = highlighted_part,
@@ -498,11 +510,15 @@ class ObjFile:
         part_data     = cached_object.obj_anim_data.get_part_data(sprite_part_index)
         graph_file    = cached_object.graph_file
         obj_anim_data = cached_object.obj_anim_data
+        palette_data  = cached_object.palette_data
+
+        palette = palette_data.get_palette()
         
         return draw_part(
             part_data     = part_data,
             graph_file    = graph_file,
             obj_anim_data = obj_anim_data,
+            palette       = palette,
             ignore_flips  = True,
         )
     
@@ -646,10 +662,7 @@ class ObjFile:
             data.seek(8)
             sprites = []
             for _ in range(sprite_count):
-                entry_index, palette, unknown_04 = struct.unpack_from('<3H', data.read(record_size))
-                if (record_size == 0x14 and unknown_04 != 0xFFFF) or entry_index + 1 >= entry_count or palette >= palette_count:
-                    break
-                sprites.append((entry_index, palette))
+                sprites.append(data.read(record_size))
             if len(sprites) != sprite_count:
                 continue
 
@@ -937,46 +950,64 @@ class ObjFile:
 
         return warped
 
-    class NdsSpriteHandle:
-        # fills the role CellAnimFile plays for the BG4 archives: it names the
-        # object's animation and pixel entries and its default palette
-        def __init__(self, name, entry_index, palette):
-            self.name = name
-
-            # entry i is the animation data and entry i + 1 the pixel data; a
-            # record pointing at entry 0 (the header) holds no animation data
-            # (e.g. USA FObj.dat sprite 0x1AB)
-            self.anim_file = f"{entry_index:04X}" if entry_index != 0 else ""
-            self.graph_file = f"{entry_index + 1:04X}"
-            self.color_file = "" # these games have no color-animation data
-            self.palette = palette
-
     class ObjectCache:
         def __init__(self, name):
             self.name = name
         
     class CellAnimFile: # TODO: lots of unknowns here
         def __init__(self, name, input_data):
-            data = BytesIO(input_data)
             self.name = name
-
-            self.anim_file = self.get_string(data.read(4))
-            self.graph_file = self.get_string(data.read(4))
-            self.color_file = self.get_string(data.read(4))
-            self.hitbox_file = self.get_string(data.read(4)) # TODO: figure out how this works
-
             self.input_data = input_data
 
-            # more unknowns past here
+        def interpret_data(self, game_id):
+            data = BytesIO(self.input_data)
+
+            if game_id in GAME_IDS_THAT_USE_BG4: # > ml5
+                self.anim_file = self.get_string(data.read(4))
+                self.graph_file = self.get_string(data.read(4))
+                self.color_file = self.get_string(data.read(4))
+                self.hitbox_file = self.get_string(data.read(4)) # TODO: figure out how this works
+                # more unknowns past here
+
+            elif game_id in GAME_IDS_THAT_USE_PALETTES: # < ml3
+                anim_file = int.from_bytes(data.read(2), 'little')
+                self.anim_file = self.get_num(anim_file)
+                self.graph_file = self.get_num(anim_file + 1)
+                self.color_file = ""
+                self.palette_entry = int.from_bytes(data.read(2), 'little')
+                # more unknowns past here
+            
+            else: # poor ol' lonely ml4
+                ...
         
         def get_string(self, input_data):
             string_end = input_data.find(0)
             return input_data[:string_end].decode("ascii")
         
+        def get_num(self, number):
+            return f"{number:04X}"
+        
     class DataFile:
         def __init__(self, name, input_data):
             self.name = name
             self.data = input_data
+        
+        def decompress_data(self, key):
+            key = {
+                "ML2":  "rlz",
+                "ML3":  "rlz",
+                "ML5":  "blz",
+                "ML1R": "blz",
+                "ML3R": "blz",
+            }.get(key, key)
+
+            match key:
+                case "blz":
+                    return self.blz_decompress_data()
+                case "rlz":
+                    return self.rlz_decompress_data()
+                case _:
+                    return self.data
 
         def rlz_decompress_data(self):
             if self.data is None: return bytearray([])
@@ -1039,7 +1070,7 @@ class ObjFile:
             except Exception:
                 return data
 
-        def blz77_decompress_data(self): # stole this from danius
+        def blz_decompress_data(self): # stole this from danius
             if self.data is None: return bytearray([])
 
             data = self.data
@@ -1174,13 +1205,16 @@ class ObjFile:
 
                     # things are laid out like this so it's easy to see what bits are used where
                     self.graph_shift =    (flags & 0b0000000001110000) >> 4
+                    color_mode       =    (flags & 0b0001110000000000) >> 10
                     self.tiled_mode  =     flags & 0b0010000000000000 == 0 # TODO: expose this to the user
-                    color_mode       = int(flags & 0b0100000000000000 != 0)
+                    bpp_flag         =     flags & 0b0100000000000000 != 0 # TODO: expose this to the user
 
-                    self.color_mode = [ # key, bits-per-pixel
-                        ["I4", 4],
-                        ["I8", 8],
-                    ][color_mode]
+                    self.color_mode = [{ # key, bits-per-pixel # TODO: make bpp's function more accurate to the DS hardware
+                        1: "A3I5",
+                        3: "I4",
+                        4: "I8",
+                        6: "A5I3",
+                    }.get(color_mode, f"Not Found: {color_mode}"), 8 if bpp_flag else 4]
 
                     self.anim_offset = self.input_data.tell()
 
@@ -1267,23 +1301,25 @@ class ObjFile:
                     case "ML2":
                         # TODO: unknowns
                         # TODO: do stuff with depth and stuff
-                        attr0, attr1, attr2, unk, attr4, unk = struct.unpack('<6H', input_data)
+                        attr0, attr1, attr2, attr3, attr4, attr5 = struct.unpack('<6H', input_data)
                         # things are laid out like this so it's easy to see what bits are used where
-                        self.y_offset    = ((attr0 & 0b0000000011111111) ^ 0x80) - 0x80
-                        trans_flag       =  (attr0 & 0b0000000100000000) != 0
-                        double_size_flag =  (attr0 & 0b0000001000000000) != 0
-                        self.depth       =  (attr0 & 0b0010000000000000) >> 13
-                        self.part_shape  =  (attr0 & 0b1100000000000000) >> 14
+                        self.y_offset               = ((attr0 & 0b0000000011111111) ^ 0x80) - 0x80
+                        trans_flag                  =  (attr0 & 0b0000000100000000) != 0
+                        double_size_flag            =  (attr0 & 0b0000001000000000) != 0
+                        self.depth                  =  (attr0 & 0b0010000000000000) >> 13
+                        self.part_shape             =  (attr0 & 0b1100000000000000) >> 14
         
-                        self.x_offset   = ((attr1 & 0b0000000111111111) ^ 0x100) - 0x100
-                        self.x_flip     =  (attr1 & 0b0001000000000000) != 0
-                        self.y_flip     =  (attr1 & 0b0010000000000000) != 0
-                        self.part_size  =  (attr1 & 0b1100000000000000) >> 14
+                        self.x_offset               = ((attr1 & 0b0000000111111111) ^ 0x100) - 0x100
+                        self.x_flip                 =  (attr1 & 0b0001000000000000) != 0
+                        self.y_flip                 =  (attr1 & 0b0010000000000000) != 0
+                        self.part_size              =  (attr1 & 0b1100000000000000) >> 14
 
-                        self.graphics_buffer_offset = (attr2 & 0x3FF) << parent.graph_shift
+                        self.graphics_buffer_offset =  (attr2 & 0b1111111111111111) << parent.graph_shift
 
-                        # TODO: make this shit available to all the thingies that get bounding boxes based on sprite
-                        self.transform = (attr4 & 0x3FF) + 1 if trans_flag else 0
+                        self.transform              =  (attr4 & 0b0000001111111111) + 1 if trans_flag else 0
+                        self.palette_shift          =  (attr4 & 0b0111000000000000) >> 12
+
+                        # TODO: make transform shit available to all the thingies that get bounding boxes based on sprite
 
                         self.renderer = None
                     case _:
@@ -1330,7 +1366,7 @@ class ObjFile:
                     ]
                 else:
                     # TODO: unknowns? maybe?
-                    angle, scale_x, scale_y = struct.unpack('<Hhh6x', input_data)
+                    angle, scale_x, scale_y = struct.unpack('<Hhh6x', input_data) # TODO: make the matrix be better
                     theta = (angle / 0x10000) * 2 * numpy.pi
                     scale_x /= 0x100
                     scale_y /= 0x100
@@ -1583,3 +1619,11 @@ class ObjFile:
                         return_set.append([self.return_color, animation_full[1]])
             
             return return_set
+    
+    class PaletteData: #TODO
+        def __init__(self):
+            ...
+        
+        def get_palette(self):
+            palette = [[0x10, 0x30, 0x50], [0x50, 0x30, 0x10], [0x30, 0x10, 0x50], [0x50, 0x10, 0x30]] * 64
+            return palette

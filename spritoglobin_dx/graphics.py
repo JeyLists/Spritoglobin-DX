@@ -18,7 +18,7 @@ SWIZZLE_TABLE = numpy.array([
 SIZING_TABLE = [[(8, 8), (16, 16), (32, 32), (64, 64)], [(16, 8), (32, 8), (32, 16), (64, 32)], [(8, 16), (8, 32), (16, 32), (32, 64)]]
 
 
-def get_sprite_graphic(obj_anim_data, graph_file, current_anim_index, color_anim_index, current_frame_index, current_time_anim, current_time_color, color_data, bypass_shader, separate):
+def get_sprite_graphic(obj_anim_data, graph_file, palette_data, current_anim_index, color_anim_index, current_frame_index, current_time_anim, current_time_color, color_data, bypass_shader, separate):
     anim_data = obj_anim_data.get_anim_data(current_anim_index)
     frame_data = obj_anim_data.get_frame_data(anim_data.first_frame + current_frame_index)
 
@@ -74,6 +74,7 @@ def get_sprite_graphic(obj_anim_data, graph_file, current_anim_index, color_anim
     data = get_sprite_part_set_graphic(
         obj_anim_data          = obj_anim_data,
         graph_file             = graph_file,
+        palette_data           = palette_data,
         first_part             = frame_data.first_part,
         total_parts            = frame_data.total_parts,
         bypass_shader          = bypass_shader,
@@ -161,7 +162,7 @@ def get_sprite_part_set_bounding_box(obj_anim_data, first_part, total_parts, giv
     
     return min_x, max_x, min_y, max_y
 
-def get_sprite_part_set_graphic(obj_anim_data, graph_file, first_part, total_parts, bypass_shader = False, separate = False, matrix = None, given_bounding_box = None, color_data = None, current_anim_index = None, color_anim_index = None, current_time_anim = None, current_time_color = None, highlighted_part = None):
+def get_sprite_part_set_graphic(obj_anim_data, graph_file, palette_data, first_part, total_parts, bypass_shader = False, separate = False, matrix = None, given_bounding_box = None, color_data = None, current_anim_index = None, color_anim_index = None, current_time_anim = None, current_time_color = None, highlighted_part = None):
     min_x, max_x, min_y, max_y = get_sprite_part_set_bounding_box(
         obj_anim_data      = obj_anim_data,
         first_part         = first_part,
@@ -194,6 +195,8 @@ def get_sprite_part_set_graphic(obj_anim_data, graph_file, first_part, total_par
             else:
                 renderer_data = None
                 # renderer_data = obj_anim_data.get_renderer_data(part_data.renderer)
+            
+            palette = palette_data.get_palette()
 
             alpha_divisor = None
             if highlighted_part is not None and highlighted_part != i:
@@ -205,6 +208,7 @@ def get_sprite_part_set_graphic(obj_anim_data, graph_file, first_part, total_par
                     part_data     = part_data,
                     graph_file    = graph_file,
                     obj_anim_data = obj_anim_data,
+                    palette       = palette,
                     alpha_divisor = alpha_divisor,
                 )
 
@@ -221,6 +225,7 @@ def get_sprite_part_set_graphic(obj_anim_data, graph_file, first_part, total_par
                     graph_file    = graph_file,
                     obj_anim_data = obj_anim_data,
                     sheet_size    = part_data_master.sheet_size,
+                    palette       = palette,
                     alpha_divisor = alpha_divisor,
                 )
 
@@ -311,7 +316,7 @@ def get_sprite_part_set_graphic(obj_anim_data, graph_file, first_part, total_par
     
     return img.tobytes(), (graph_w, graph_h), (offset_x, offset_y)
 
-def draw_part(part_data, graph_file, obj_anim_data, alpha_divisor = None, ignore_flips = False):
+def draw_part(part_data, graph_file, obj_anim_data, palette, alpha_divisor = None, ignore_flips = False):
     part_size = part_data.part_size
     part_shape = part_data.part_shape
     img_width, img_height = SIZING_TABLE[part_shape][part_size]
@@ -325,7 +330,7 @@ def draw_part(part_data, graph_file, obj_anim_data, alpha_divisor = None, ignore
     size = ((img_width * img_height) * color_mode[1]) // 8
     raw = numpy.frombuffer(graph_file[start:start + size], dtype = numpy.uint8)
 
-    pixels = get_pixels_from_buffer(raw, color_mode, swizzle)
+    pixels = get_pixels_from_buffer(raw, palette, color_mode, swizzle)
 
     if alpha_divisor is not None:
         pixels[..., 3] //= alpha_divisor
@@ -342,7 +347,7 @@ def draw_part(part_data, graph_file, obj_anim_data, alpha_divisor = None, ignore
     
     return out, (img_width, img_height)
 
-def draw_segment(segment_data, graph_file, obj_anim_data, sheet_size, alpha_divisor = None, ignore_flips = False):
+def draw_segment(segment_data, graph_file, obj_anim_data, sheet_size, palette, alpha_divisor = None, ignore_flips = False):
     img_width, img_height = sheet_size
     color_mode = obj_anim_data.color_mode
 
@@ -354,7 +359,7 @@ def draw_segment(segment_data, graph_file, obj_anim_data, sheet_size, alpha_divi
     size = ((img_width * img_height) * color_mode[1]) // 8
     raw = numpy.frombuffer(graph_file[start:start + size], dtype = numpy.uint8)
 
-    pixels = get_pixels_from_buffer(raw, color_mode, swizzle)
+    pixels = get_pixels_from_buffer(raw, palette, color_mode, swizzle)
     
     tiles_x, tiles_y = img_width // 8, img_height // 8
     
@@ -378,7 +383,7 @@ def draw_segment(segment_data, graph_file, obj_anim_data, sheet_size, alpha_divi
     
     return out, (img_width, img_height)
 
-def get_pixels_from_buffer(raw, color_mode, swizzle):
+def get_pixels_from_buffer(raw, palette, color_mode, swizzle):
     # for more info:
     # https://problemkaputt.de/gbatek-3ds-gpu-texture-formats.htm
 
@@ -476,21 +481,55 @@ def get_pixels_from_buffer(raw, color_mode, swizzle):
             color_block = (raw.view(numpy.uint64)[1::2]).reshape(-1, 4)
 
             pixels = etc1_decompress(color_block, alpha_block)
-        case "I8":
+        case "I4" | "I8":
             raw_pixel = raw.view(numpy.uint8)
-            r = raw_pixel
-            g = raw_pixel
-            b = raw_pixel
+            palette = numpy.array(palette, dtype=numpy.uint8)
+            match color_mode[1]:
+                case 4:
+                    raw = raw.view(numpy.uint8)
+                    pixels = numpy.empty(raw.size * 2, dtype = numpy.uint8)
+                    pixels[0::2] = raw & 0x0F
+                    pixels[1::2] = raw >> 4
+                    raw_pixel = pixels
+                case 8:
+                    raw_pixel = raw.view(numpy.uint8)
+            r = palette[raw_pixel, 0]
+            g = palette[raw_pixel, 1]
+            b = palette[raw_pixel, 2]
             a = numpy.where(raw_pixel == 0, 0, 255).astype(numpy.uint8)
+        case "A5I3":
+            raw_pixel = raw.view(numpy.uint8)
+            palette = numpy.array(palette, dtype=numpy.uint8)
+            r = palette[raw_pixel & 0x7, 0]
+            g = palette[raw_pixel & 0x7, 1]
+            b = palette[raw_pixel & 0x7, 2]
+            # 5bit
+            a = (raw_pixel >> 3) & 0x1F
+            # 5bit -> 6bit
+            a = (a << 1) + numpy.where(a == 0, 0, 1).astype(numpy.uint8)
+            # 6bit -> 8bit
+            a = (a << 2) | (a >> 4)
+        case "A3I5":
+            raw_pixel = raw.view(numpy.uint8)
+            palette = numpy.array(palette, dtype=numpy.uint8)
+            r = palette[raw_pixel & 0x1F, 0]
+            g = palette[raw_pixel & 0x1F, 1]
+            b = palette[raw_pixel & 0x1F, 2]
+            # 3bit -> 5bit
+            a = (((raw_pixel >> 5) & 0x7) << 2) + (((raw_pixel >> 5) & 0x7) >> 1)
+            # 5bit -> 6bit
+            a = (a << 1) + numpy.where(a == 0, 0, 1).astype(numpy.uint8)
+            # 6bit -> 8bit
+            a = (a << 2) | (a >> 4)
         case "I4":
             raw = raw.view(numpy.uint8)
             pixels = numpy.empty(raw.size * 2, dtype = numpy.uint8)
             pixels[0::2] = raw & 0x0F
             pixels[1::2] = raw >> 4
             raw_pixel = pixels
-            r = raw_pixel << 4 | raw_pixel & 0x0F
-            g = raw_pixel << 4 | raw_pixel & 0x0F
-            b = raw_pixel << 4 | raw_pixel & 0x0F
+            r = palette[raw_pixel, 0]
+            g = palette[raw_pixel, 1]
+            b = palette[raw_pixel, 2]
             a = numpy.where(raw_pixel == 0, 0, 255).astype(numpy.uint8)
 
     if not etc1:

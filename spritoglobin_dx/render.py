@@ -368,8 +368,8 @@ class SpriteRenderer:
                     part_sr = numpy.array([
                         [a * size[0], -b * size[1], 0,  x],
                         [-c * size[0], d * size[1], 0, -y],
-                        [0, 0, 1,  0],
-                        [0, 0, 0,  1],
+                        [0, 0, 1, 0],
+                        [0, 0, 0, 1],
                     ], dtype='f4')
 
                     part_t = numpy.array([
@@ -386,8 +386,8 @@ class SpriteRenderer:
                     part_matrix = numpy.array([
                         [a, -b, 0,  x],
                         [-c, d, 0, -y],
-                        [0, 0, 1,  0],
-                        [0, 0, 0,  1],
+                        [0, 0, 1, 0],
+                        [0, 0, 0, 1],
                     ], dtype='f4')
 
                     full_matrix = self.projection @ global_matrix @ local_matrix @ pattern_matrix @ part_matrix
