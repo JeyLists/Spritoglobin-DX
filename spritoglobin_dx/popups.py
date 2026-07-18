@@ -150,7 +150,7 @@ class FileImportWindow(QtWidgets.QDialog):
                 #: Describes an NDS sprite container. "BObj" and "FObj" are internal names, do not translate them.
                 info = self.tr("NDS {0} Container").format("BObj" if obj_data.nds_is_bobj else "FObj")
                 valid = (obj_data.valid_entries, obj_data.invalid_entries)
-                ca_valid = (len(obj_data.cellanim_files), len(obj_data.nds_palettes))
+                ca_valid = (len(obj_data.cellanim_files), len(obj_data.palette_files) - 1)
             else:
                 info = self.tr("BG4 Archive (Version {0}.{1})").format(*obj_data.bg4_version)
                 valid = (obj_data.valid_entries, obj_data.invalid_entries)

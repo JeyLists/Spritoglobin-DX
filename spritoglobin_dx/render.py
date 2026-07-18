@@ -366,15 +366,15 @@ class SpriteRenderer:
                     a, b, x, c, d, y = base_matrix
 
                     part_sr = numpy.array([
-                        [a * size[0], -b * size[1], 0,  x],
-                        [-c * size[0], d * size[1], 0, -y],
+                        [a, -b, 0,  x],
+                        [-c, d, 0, -y],
                         [0, 0, 1, 0],
                         [0, 0, 0, 1],
                     ], dtype='f4')
 
                     part_t = numpy.array([
-                        [1, 0, 0, offset[0] / size[0]],
-                        [0, 1, 0, offset[1] / size[1]],
+                        [1, 0, 0, offset[0]],
+                        [0, 1, 0, offset[1]],
                         [0, 0, 1, 0],
                         [0, 0, 0, 1],
                     ], dtype='f4')
@@ -384,8 +384,8 @@ class SpriteRenderer:
                     a, b, x, c, d, y = part_matrix
 
                     part_matrix = numpy.array([
-                        [a, -b, 0,  x],
-                        [-c, d, 0, -y],
+                        [a * size[0], -b * size[1], 0,  x],
+                        [-c * size[0], d * size[1], 0, -y],
                         [0, 0, 1, 0],
                         [0, 0, 0, 1],
                     ], dtype='f4')

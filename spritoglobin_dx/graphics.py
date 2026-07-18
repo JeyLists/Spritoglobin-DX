@@ -330,7 +330,7 @@ def draw_part(part_data, graph_file, obj_anim_data, palette, alpha_divisor = Non
     size = ((img_width * img_height) * color_mode[1]) // 8
     raw = numpy.frombuffer(graph_file[start:start + size], dtype = numpy.uint8)
 
-    pixels = get_pixels_from_buffer(raw, palette, color_mode, swizzle)
+    pixels = get_pixels_from_buffer(raw, palette, part_data.palette_shift, color_mode, swizzle)
 
     if alpha_divisor is not None:
         pixels[..., 3] //= alpha_divisor
@@ -359,7 +359,7 @@ def draw_segment(segment_data, graph_file, obj_anim_data, sheet_size, palette, a
     size = ((img_width * img_height) * color_mode[1]) // 8
     raw = numpy.frombuffer(graph_file[start:start + size], dtype = numpy.uint8)
 
-    pixels = get_pixels_from_buffer(raw, palette, color_mode, swizzle)
+    pixels = get_pixels_from_buffer(raw, palette, 0, color_mode, swizzle)
     
     tiles_x, tiles_y = img_width // 8, img_height // 8
     
@@ -383,7 +383,7 @@ def draw_segment(segment_data, graph_file, obj_anim_data, sheet_size, palette, a
     
     return out, (img_width, img_height)
 
-def get_pixels_from_buffer(raw, palette, color_mode, swizzle):
+def get_pixels_from_buffer(raw, palette, palette_shift, color_mode, swizzle):
     # for more info:
     # https://problemkaputt.de/gbatek-3ds-gpu-texture-formats.htm
 
@@ -493,9 +493,10 @@ def get_pixels_from_buffer(raw, palette, color_mode, swizzle):
                     raw_pixel = pixels
                 case 8:
                     raw_pixel = raw.view(numpy.uint8)
-            r = palette[raw_pixel, 0]
-            g = palette[raw_pixel, 1]
-            b = palette[raw_pixel, 2]
+                    palette_shift = 0
+            r = palette[raw_pixel | (palette_shift << 4), 0]
+            g = palette[raw_pixel | (palette_shift << 4), 1]
+            b = palette[raw_pixel | (palette_shift << 4), 2]
             a = numpy.where(raw_pixel == 0, 0, 255).astype(numpy.uint8)
         case "A5I3":
             raw_pixel = raw.view(numpy.uint8)

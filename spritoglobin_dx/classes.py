@@ -2,6 +2,7 @@ import copy
 import struct
 from io import BytesIO
 
+from mnllib.bis import decompress as rlz_decompress
 import numpy
 
 from spritoglobin_dx.constants import *
@@ -28,6 +29,7 @@ class InvalidObjectFileError(Exception):
 class ObjFile:
     def __init__(self, input_data, game_id = None):
         self.cellanim_files = {}
+        self.palette_files = {"": self.PaletteFile("", b'')}
         self.data_files = {"": self.DataFile("", None)}
         self.cached_objects = {}
 
@@ -53,7 +55,7 @@ class ObjFile:
                     tests_completed = True
                     for file in self.cellanim_files:
                         self.cellanim_files[file].interpret_data(game_key)
-                        test = self.AnimData(self.data_files[cellanim_file.anim_file].decompress_data(game_key), game_key, test = True)
+                        test = self.AnimData(self.data_files[self.cellanim_files[file].anim_file].decompress_data(game_key), game_key, test = True)
 
                         # if file uses sprite sheet mode, move on TODO: re-enable and finish
                         # if test.sprite_sheet_mode:
@@ -82,10 +84,14 @@ class ObjFile:
 
                     # entry 0 holds the sprite and palette records, filling the
                     # role that _CA_INFO_ fills in the BG4 archives
-                    self.nds_is_bobj, sprites, self.nds_palettes = self.nds_header_extract(data, len(nds_extract))
+                    self.nds_is_bobj, sprites, nds_palettes = self.nds_header_extract(data, len(nds_extract))
                     for i, data in enumerate(sprites):
+                        if data == bytes(len(data)): continue # invalid data TODO: display that number
                         name = f"Sprite 0x{i:03X}"
                         self.cellanim_files[name] = self.CellAnimFile(name, data)
+                    for i, data in enumerate(nds_palettes):
+                        name = f"{i:04X}"
+                        self.palette_files[name] = self.PaletteFile(name, data)
 
                 if game_id is None:
                     for game_key in GAME_IDS_THAT_ARE_ON_NDS:
@@ -128,6 +134,8 @@ class ObjFile:
 
         for file in self.cellanim_files: # just in case
             self.cellanim_files[file].interpret_data(self.game_id)
+        for file in self.palette_files:
+            self.palette_files[file].interpret_data(self.game_id)
     
     def perform_tests(self):
         return
@@ -143,30 +151,7 @@ class ObjFile:
 
         if cached_object.name != object_name:
             current_obj_data = self.cellanim_files[object_name]
-
-            # TODO: generalize this
-            if self.game_id in GAME_IDS_THAT_ARE_ON_NDS:
-                # everything NDS-shaped about the data ends right here
-                with open ("testpit.dat", "wb") as test:
-                    test.write(self.data_files[current_obj_data.anim_file].decompress_data(self.game_id))
-                anim_data, graph_file = self.nds_convert_object(
-                    self.data_files[current_obj_data.anim_file].decompress_data(self.game_id),
-                    self.data_files[current_obj_data.graph_file].decompress_data(self.game_id),
-                    self.nds_palette_rgba(current_obj_data.palette_entry),
-                    self.nds_is_bobj,
-                )
-
-                anim_data = self.data_files[current_obj_data.anim_file].decompress_data(self.game_id)
-                graph_file = self.data_files[current_obj_data.graph_file].decompress_data(self.game_id)
-
-                cached_object.name = object_name
-                cached_object.obj_anim_data = self.AnimData(anim_data, self.game_id)
-                cached_object.graph_file = graph_file
-                cached_object.color_data = self.ColorData(self.data_files[current_obj_data.color_file].decompress_data(self.game_id))
-                cached_object.palette_data = self.PaletteData()
-
-                self.cached_objects[cache_id] = cached_object
-                return
+            current_pal_data = self.palette_files[current_obj_data.palette_entry]
 
             # for testing DT
             use_force = False
@@ -192,8 +177,14 @@ class ObjFile:
             else:
                 with open(f"{force_root}/{force[2]:04X}.dat", "rb") as test:
                     cached_object.color_data = self.ColorData(test.read())
+
+            pal_data = self.data_files[current_pal_data.palette_file].data
+            pal_anim_data = self.data_files[current_pal_data.palette_anim_file].data
             
-            cached_object.palette_data = self.PaletteData() # TODO
+            cached_object.palette_data = self.PaletteData(
+                pal_data[:current_pal_data.palette_size] if pal_data is not None else b'',
+                pal_anim_data[:current_pal_data.palette_anim_size] if pal_anim_data is not None else b'',
+            )
             
             self.cached_objects[cache_id] = cached_object
     
@@ -669,33 +660,13 @@ class ObjFile:
             # --- Palette records ---
             palettes = []
             for _ in range(palette_count):
-                entry_index, auxiliary_index, bank_count, auxiliary_count = struct.unpack_from('<2H2B', data.read(8))
-                if entry_index >= entry_count or bank_count == 0:
-                    break
-                palettes.append((entry_index, bank_count))
+                palettes.append(data.read(8))
             if len(palettes) != palette_count:
                 continue
 
             return record_size == 0x14, sprites, palettes
 
         raise ValueError("invalid sprite or palette records")
-
-    def nds_palette_rgba(self, palette_index):
-        # PiT palettes are uncompressed 16-color RGB555 banks; expand them
-        # into one 256-color RGBA table
-        entry_index, bank_count = self.nds_palettes[palette_index]
-        data = BytesIO(self.data_files[f"{entry_index:04X}"].data[:bank_count * 0x20])
-
-        palette = numpy.zeros((256, 4), dtype = numpy.uint8)
-        for i in range(256):
-            color = data.read(2)
-            if len(color) < 2:
-                break
-            value = int.from_bytes(color, 'little')
-            r, g, b = value & 0x1F, (value >> 5) & 0x1F, (value >> 10) & 0x1F
-            palette[i] = ((r << 3) | (r >> 2), (g << 3) | (g >> 2), (b << 3) | (b >> 2), 255)
-
-        return palette
 
     def nds_convert_object(self, anim_data, graph_file, palette, is_bobj):
         # Parse one sprite's NDS animation and pixel data into the AnimData
@@ -953,8 +924,16 @@ class ObjFile:
     class ObjectCache:
         def __init__(self, name):
             self.name = name
+    
+    class CAFile:
+        def get_string(self, input_data):
+            string_end = input_data.find(0)
+            return input_data[:string_end].decode("ascii")
         
-    class CellAnimFile: # TODO: lots of unknowns here
+        def get_num(self, number):
+            return f"{number:04X}"
+        
+    class CellAnimFile(CAFile): # TODO: lots of unknowns here
         def __init__(self, name, input_data):
             self.name = name
             self.input_data = input_data
@@ -966,6 +945,7 @@ class ObjFile:
                 self.anim_file = self.get_string(data.read(4))
                 self.graph_file = self.get_string(data.read(4))
                 self.color_file = self.get_string(data.read(4))
+                self.palette_entry = ""
                 self.hitbox_file = self.get_string(data.read(4)) # TODO: figure out how this works
                 # more unknowns past here
 
@@ -974,18 +954,37 @@ class ObjFile:
                 self.anim_file = self.get_num(anim_file)
                 self.graph_file = self.get_num(anim_file + 1)
                 self.color_file = ""
-                self.palette_entry = int.from_bytes(data.read(2), 'little')
+                self.palette_entry = self.get_num(int.from_bytes(data.read(2), 'little'))
                 # more unknowns past here
             
             else: # poor ol' lonely ml4
                 ...
         
-        def get_string(self, input_data):
-            string_end = input_data.find(0)
-            return input_data[:string_end].decode("ascii")
-        
-        def get_num(self, number):
-            return f"{number:04X}"
+    class PaletteFile(CAFile): # TODO: lots of unknowns here
+        def __init__(self, name, input_data):
+            self.name = name
+            self.input_data = input_data
+
+        def interpret_data(self, game_id):
+            data = BytesIO(self.input_data)
+
+            if self.input_data == b'':
+                self.palette_file = ""
+                self.palette_anim_file = ""
+                self.palette_size = 0
+                self.palette_anim_size = 0
+                return
+
+            match game_id:
+                case "ML2":
+                    self.palette_file = self.get_num(int.from_bytes(data.read(2), 'little'))
+                    palette_anim_file = int.from_bytes(data.read(2), 'little')
+                    if palette_anim_file != 0xFFFF:
+                        self.palette_anim_file = self.get_num(palette_anim_file)
+                    else:
+                        self.palette_anim_file = ""
+                    self.palette_size = int.from_bytes(data.read(1)) * 0x20
+                    self.palette_anim_size = int.from_bytes(data.read(1)) * 0x2
         
     class DataFile:
         def __init__(self, name, input_data):
@@ -993,6 +992,8 @@ class ObjFile:
             self.data = input_data
         
         def decompress_data(self, key):
+            if self.data == b'' or self.data is None: return b''
+
             key = {
                 "ML2":  "rlz",
                 "ML3":  "rlz",
@@ -1005,70 +1006,9 @@ class ObjFile:
                 case "blz":
                     return self.blz_decompress_data()
                 case "rlz":
-                    return self.rlz_decompress_data()
+                    return rlz_decompress(BytesIO(self.data))
                 case _:
                     return self.data
-
-        def rlz_decompress_data(self):
-            if self.data is None: return bytearray([])
-
-            data = self.data
-
-            """Decompress the NDS games' custom RLZ block compression (this is distinct from Nintendo's LZ10)"""
-            try:
-                in_off = 0
-
-                def read_rlz_uint():
-                    nonlocal in_off
-                    composite = data[in_off]
-                    in_off += 1
-                    extra_bytes = composite >> 6
-                    value = composite & 0x3F
-                    for i in range(extra_bytes):
-                        value |= data[in_off] << (6 * (i + 1))
-                        in_off += 1
-                    return value
-
-                out_size = read_rlz_uint()
-                block_count = read_rlz_uint() + 1
-
-                out = bytearray(out_size)
-                out_off = 0
-                for _ in range(block_count):
-                    block_length = int.from_bytes(data[in_off:in_off + 2], 'little')
-                    in_off += 2
-                    target = in_off + block_length
-                    block_done = False
-                    while in_off < target and not block_done:
-                        control = data[in_off]
-                        in_off += 1
-                        for _ in range(4):
-                            match control & 3:
-                                case 0:
-                                    block_done = True
-                                    break
-                                case 1:
-                                    out[out_off] = data[in_off]
-                                    in_off += 1
-                                    out_off += 1
-                                case 2:
-                                    offset = data[in_off] | ((data[in_off + 1] & 0xF0) << 4)
-                                    length = (data[in_off + 1] & 0x0F) + 2
-                                    in_off += 2
-                                    for _ in range(length):
-                                        out[out_off] = out[out_off - offset]
-                                        out_off += 1
-                                case 3:
-                                    length = data[in_off] + 2
-                                    value = data[in_off + 1]
-                                    in_off += 2
-                                    out[out_off:out_off + length] = bytes([value]) * length
-                                    out_off += length
-                            control >>= 2
-
-                return bytes(out)
-            except Exception:
-                return data
 
         def blz_decompress_data(self): # stole this from danius
             if self.data is None: return bytearray([])
@@ -1283,7 +1223,8 @@ class ObjFile:
         class AnimFrame:
             def __init__(self, parent, input_data, game_id):
                 if game_id in GAME_IDS_THAT_USE_SPLIT_PATTERN_DATA:
-                    part_set_index, self.anim_duration = struct.unpack('<2H', input_data)
+                    # TODO: unknown
+                    part_set_index, self.anim_duration, unk = struct.unpack('<H2B', input_data)
                     self.first_part, last_part = struct.unpack('<2H', parent.get_data_at_offset(parent.part_set_size, parent.part_set_offset, part_set_index))
                     self.total_parts = last_part - self.first_part
                     self.transform = 0 # TODO: find a way to make it obvious whether transform is unused or straight up not supported
@@ -1300,7 +1241,7 @@ class ObjFile:
                 match game_id:
                     case "ML2":
                         # TODO: unknowns
-                        # TODO: do stuff with depth and stuff
+                        # TODO: do stuff with depth and flags and stuff
                         attr0, attr1, attr2, attr3, attr4, attr5 = struct.unpack('<6H', input_data)
                         # things are laid out like this so it's easy to see what bits are used where
                         self.y_offset               = ((attr0 & 0b0000000011111111) ^ 0x80) - 0x80
@@ -1317,7 +1258,7 @@ class ObjFile:
                         self.graphics_buffer_offset =  (attr2 & 0b1111111111111111) << parent.graph_shift
 
                         self.transform              =  (attr4 & 0b0000001111111111) + 1 if trans_flag else 0
-                        self.palette_shift          =  (attr4 & 0b0111000000000000) >> 12
+                        self.palette_shift          =  (attr4 & 0b0011110000000000) >> 10 # TODO: expose to user and also fix
 
                         # TODO: make transform shit available to all the thingies that get bounding boxes based on sprite
 
@@ -1334,6 +1275,7 @@ class ObjFile:
                             print(f"'self.horizontal_flip' IS WEIRD IN ONE OF THE SPRITE PARTS: {self.horizontal_flip}")
 
                         self.transform = 0 # TODO: find a way to make it obvious whether transform is unused or straight up not supported
+                        self.palette_shift = 0
 
                 if game_id in GAME_IDS_THAT_USE_NORMAL_MAPS:
                     self.normal_map, = struct.unpack('<I', input_data[12:])
@@ -1371,8 +1313,8 @@ class ObjFile:
                     scale_x /= 0x100
                     scale_y /= 0x100
                     self.matrix = [
-                        scale_x * numpy.cos(theta), -scale_y * numpy.sin(theta), 0,
-                        scale_x * numpy.sin(theta),  scale_y * numpy.cos(theta), 0,
+                        scale_x * numpy.cos(theta), -numpy.sin(theta), 0,
+                        numpy.sin(theta),  scale_y * numpy.cos(theta), 0,
                     ]
     
         class Renderer:
@@ -1620,10 +1562,23 @@ class ObjFile:
             
             return return_set
     
-    class PaletteData: #TODO
-        def __init__(self):
-            ...
+    class PaletteData:
+        def __init__(self, input_data, input_anim_data):
+            self.palette = [0x0000] * 256
+            self.input_data = BytesIO(input_data)
+            self.input_anim_data = BytesIO(input_anim_data)
+
+            palette_colors = struct.unpack(f'<{len(input_data) // 2}H', self.input_data.read())
+            self.palette[:len(palette_colors)] = palette_colors
         
         def get_palette(self):
-            palette = [[0x10, 0x30, 0x50], [0x50, 0x30, 0x10], [0x30, 0x10, 0x50], [0x50, 0x10, 0x30]] * 64
+            # palette animation stuff goes here in the future
+            palette = []
+            for color in self.palette:
+                out_color = []
+                for x in range(3):
+                    x = color >> (x * 5) & 0x1F       # 5 bit color
+                    x = (x << 1) + min(x, 1)              # 6 bit color
+                    out_color.append((x << 2) | (x >> 4)) # 8 bit color
+                palette.append(out_color)
             return palette

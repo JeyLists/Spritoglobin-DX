@@ -595,6 +595,7 @@ class MainWindow(QtWidgets.QMainWindow):
             global_palette_layout.addWidget(palette_label, i // palette_row_width, i % palette_row_width)
             self.global_palette_labels.append(palette_label)
 
+        # TODO: add palette for pre-3DS thingies
         # only one of them needs to be given this
         self.global_palette_size = 1
         self.global_palette_line_thickness = 1
