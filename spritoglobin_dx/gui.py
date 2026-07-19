@@ -305,6 +305,94 @@ class InteractiveGraphicsWindow(QtWidgets.QLabel):
 
 
 
+class PaletteDisplay(QtWidgets.QLabel):
+    # TODO: add highlighted palette range (based on color mode), highlighted palette colors (based on current sprite part), and a border around the whole thing
+    # TODO: add color copying feature (maybe just copy hex code to clipboard if you click a color)
+    # TODO: make it not be so fucky to resize
+    background_color = QtCore.Qt.GlobalColor.black
+
+    def __init__(self, parent, size, padding_amount):
+        super().__init__()
+
+        self.parent = parent
+        self.size = size
+
+        self.palette = [[0, 0, 0]] * 256
+
+        self.padding_amount = padding_amount
+        self.color_mode = None
+        self.palette_shift = 0
+        self.canvas = QtGui.QPixmap(*size)
+    
+    def resizeEvent(self, event):
+        size = event.size()
+        size = [size.width(), size.height()]
+
+        self.size = size
+        self.canvas = QtGui.QPixmap(*size)
+        self.update_image()
+    
+    def draw_palette(self, palette):
+        self.palette = palette
+        self.update_image()
+    
+    def set_highlighted_area(self, color_mode, palette_shift):
+        self.color_mode = color_mode
+        self.palette_shift = palette_shift
+        self.update_image()
+    
+    def update_image(self):
+        self.canvas.fill(self.background_color)
+        qp = QtGui.QPainter(self.canvas)
+
+        x_values = [round((self.size[0] - (self.padding_amount * 2)) * (i / 16)) for i in range(17)]
+        y_values = [round((self.size[1] - (self.padding_amount * 2)) * (i / 16)) for i in range(17)]
+
+        match self.color_mode: # TODO: replace this with the actual pixels used in a sprite part, and make the highlighted area be a box
+            case "I4":
+                highlighted_colors = set(range(self.palette_shift * 16, (self.palette_shift + 1) * 16))
+            case "A5I3":
+                highlighted_colors = set(range(0, 8))
+            case "A3I5":
+                highlighted_colors = set(range(0, 32))
+            case _:
+                highlighted_colors = set(range(256))
+
+        if self.palette is not None:
+            for i in range(len(self.palette)):
+                palette_color = QtGui.QColor(*self.palette[i])
+                if i not in highlighted_colors:
+                    palette_color.setAlpha(100)
+                    qp.setPen(QtGui.QPen(QtCore.Qt.transparent))
+                else:
+                    qp.setPen(QtGui.QPen(palette_color.darker(133)))
+
+                qp.setBrush(palette_color)
+
+                x_s = x_values[i % 16] + (self.padding_amount * 2)
+                y_s = y_values[i // 16] + (self.padding_amount * 2)
+                x_e = x_values[(i % 16) + 1] - x_s - (self.padding_amount * 2)
+                y_e = y_values[(i // 16) + 1] - y_s - (self.padding_amount * 2)
+
+                if i not in highlighted_colors:
+                    rect = QtCore.QRectF(x_s, y_s, x_e + 1, y_e + 1)
+                else:
+                    rect = QtCore.QRectF(x_s, y_s, x_e, y_e)
+                qp.drawRect(rect)
+
+                if i in highlighted_colors:
+                    qp.setPen(QtGui.QPen(palette_color.lighter(133)))
+                    qp.drawLine(rect.topLeft(), rect.topRight())
+                    qp.drawLine(rect.topLeft(), rect.bottomLeft())
+
+            qp.end()
+        self.setPixmap(self.canvas)
+    
+    def update_program_theme(self):
+        self.update_image()
+
+
+
 class AnimationTimeline(QtWidgets.QWidget):
     background_color = QtCore.Qt.GlobalColor.black
 

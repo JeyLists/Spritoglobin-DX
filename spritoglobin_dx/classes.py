@@ -199,7 +199,29 @@ class ObjFile:
             "game_id": self.game_id,
         }
     
-    def get_object_pic200_palette(self, object_name, animation_index, color_anim_index = None, cache_id = None):
+    def get_object_palette(self, object_name, strict = False, cache_id = None):
+        self.cache_object(object_name, cache_id)
+        cached_object = self.get_cached_object(cache_id)
+
+        if self.game_id not in GAME_IDS_THAT_USE_PALETTES:
+            return None
+
+        obj_data = cached_object.obj_anim_data
+        palette_data = cached_object.palette_data
+
+        try:
+            animation_timer = self.animation_timer
+        except AttributeError:
+            animation_timer = 0
+
+        palette = palette_data.get_palette(
+            timer  = animation_timer,
+            strict = strict,
+        )
+
+        return palette
+    
+    def get_object_pica200_palette(self, object_name, animation_index, color_anim_index = None, cache_id = None):
         self.cache_object(object_name, cache_id)
         cached_object = self.get_cached_object(cache_id)
 
@@ -247,8 +269,9 @@ class ObjFile:
 
         obj_data = cached_object.obj_anim_data
         color_data = cached_object.color_data
+        palette_data = cached_object.palette_data
 
-        has_color_data = color_data.global_animations != {}
+        has_color_data = color_data.global_animations != {} or palette_data.input_anim_data.getbuffer().nbytes != 0
 
         return {
             "animation_number":  obj_data.anim_num,
@@ -380,6 +403,7 @@ class ObjFile:
             "buffer_offset":   part_data.graphics_buffer_offset,
             "offset":          (part_data.x_offset, part_data.y_offset),
             "renderer_index":  part_data.renderer,
+            "palette_shift":   part_data.palette_shift,
         }
     
     def get_sprite(self, object_name, animation_index, color_anim_index = None, frame_index = None, bypass_shader = False, cache_id = None):
@@ -503,7 +527,15 @@ class ObjFile:
         obj_anim_data = cached_object.obj_anim_data
         palette_data  = cached_object.palette_data
 
-        palette = palette_data.get_palette()
+        try:
+            animation_timer = self.animation_timer
+        except AttributeError:
+            animation_timer = 0
+
+        palette = palette_data.get_palette(
+            timer  = animation_timer,
+            strict = strict,
+        )
         
         return draw_part(
             part_data     = part_data,
@@ -1569,12 +1601,19 @@ class ObjFile:
             self.input_anim_data = BytesIO(input_anim_data)
 
             palette_colors = struct.unpack(f'<{len(input_data) // 2}H', self.input_data.read())
+            self.palette_size = len(palette_colors)
             self.palette[:len(palette_colors)] = palette_colors
         
-        def get_palette(self):
+        def get_palette(self, timer, strict = False):
             # palette animation stuff goes here in the future
             palette = []
-            for color in self.palette:
+            if strict:
+                palette_size = self.palette_size
+            else:
+                palette_size = 256
+
+            for i in range(palette_size):
+                color = self.palette[i]
                 out_color = []
                 for x in range(3):
                     x = color >> (x * 5) & 0x1F       # 5 bit color
